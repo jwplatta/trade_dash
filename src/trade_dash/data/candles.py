@@ -1,7 +1,6 @@
 """Candle (OHLCV) data loader with caching."""
 from __future__ import annotations
 
-import subprocess
 from datetime import date, datetime
 from pathlib import Path
 
@@ -17,6 +16,14 @@ _FREQ_TO_SUFFIX: dict[str, str] = {
     "30min": "30min",
 }
 
+_CANDLE_DTYPES: dict[str, str] = {
+    "open": "float64",
+    "high": "float64",
+    "low": "float64",
+    "close": "float64",
+    "volume": "float64",
+}
+
 
 def _candle_path(symbol: str, freq: str, data_dir: Path = CANDLE_DIR) -> Path:
     suffix = _FREQ_TO_SUFFIX.get(freq, freq)
@@ -24,6 +31,16 @@ def _candle_path(symbol: str, freq: str, data_dir: Path = CANDLE_DIR) -> Path:
 
 
 @st.cache_data(ttl=300)
+def _load_full_candles(symbol: str, freq: str, data_dir: Path = CANDLE_DIR) -> pd.DataFrame:
+    """Load the complete candle CSV into memory (cached by symbol/freq/dir only)."""
+    path = _candle_path(symbol, freq, data_dir)
+    if not path.exists():
+        raise FileNotFoundError(f"Candle file not found: {path}")
+
+    df = pd.read_csv(path, parse_dates=["datetime"], dtype=_CANDLE_DTYPES)  # type: ignore[arg-type]
+    return df[["datetime", "open", "high", "low", "close", "volume"]]
+
+
 def load_candles(
     symbol: str,
     freq: str,
@@ -31,23 +48,12 @@ def load_candles(
     end: date | None = None,
     data_dir: Path = CANDLE_DIR,
 ) -> pd.DataFrame:
-    """Load candle CSV. Full file is cached; start/end slices the cached DataFrame."""
-    path = _candle_path(symbol, freq, data_dir)
-    if not path.exists():
-        raise FileNotFoundError(f"Candle file not found: {path}")
+    """Return candle data, optionally filtered to [start, end].
 
-    df = pd.read_csv(
-        path,
-        parse_dates=["datetime"],
-        dtype={
-            "open": "float64",
-            "high": "float64",
-            "low": "float64",
-            "close": "float64",
-            "volume": "float64",
-        },
-    )
-    df = df[["datetime", "open", "high", "low", "close", "volume"]]
+    The full file is cached by _load_full_candles; this wrapper slices from the
+    cache so repeated calls with different date ranges don't re-read from disk.
+    """
+    df = _load_full_candles(symbol, freq, data_dir)
 
     if start is not None:
         start_ts = pd.Timestamp(start, tz="UTC") if df["datetime"].dt.tz is not None else pd.Timestamp(start)
@@ -59,22 +65,12 @@ def load_candles(
     return df.reset_index(drop=True)
 
 
-@st.cache_data(ttl=3600)
+@st.cache_data(ttl=300)
 def list_available_dates(
     symbol: str, freq: str, data_dir: Path = CANDLE_DIR
 ) -> tuple[datetime, datetime]:
-    """Return (earliest, latest) datetime from the candle file without loading it all."""
-    path = _candle_path(symbol, freq, data_dir)
-    if not path.exists():
-        raise FileNotFoundError(f"Candle file not found: {path}")
-
-    first_row = pd.read_csv(path, nrows=1, parse_dates=["datetime"])
-    start_dt: datetime = first_row["datetime"].iloc[0].to_pydatetime()
-
-    result = subprocess.run(
-        ["tail", "-n", "2", str(path)], capture_output=True, text=True, check=True
-    )
-    last_line = result.stdout.strip().splitlines()[-1]
-    end_dt: datetime = pd.Timestamp(last_line.split(",")[0]).to_pydatetime()
-
+    """Return (earliest, latest) datetime available for the given symbol and frequency."""
+    df = _load_full_candles(symbol, freq, data_dir)
+    start_dt: datetime = df["datetime"].iloc[0].to_pydatetime()
+    end_dt: datetime = df["datetime"].iloc[-1].to_pydatetime()
     return start_dt, end_dt
