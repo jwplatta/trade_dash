@@ -55,11 +55,12 @@ def load_candles(
     """
     df = _load_full_candles(symbol, freq, data_dir)
 
+    tz = df["datetime"].dt.tz
     if start is not None:
-        start_ts = pd.Timestamp(start, tz="UTC") if df["datetime"].dt.tz is not None else pd.Timestamp(start)
+        start_ts = pd.Timestamp(start, tz="UTC") if tz is not None else pd.Timestamp(start)
         df = df[df["datetime"] >= start_ts]
     if end is not None:
-        end_ts = pd.Timestamp(end, tz="UTC") if df["datetime"].dt.tz is not None else pd.Timestamp(end)
+        end_ts = pd.Timestamp(end, tz="UTC") if tz is not None else pd.Timestamp(end)
         df = df[df["datetime"] <= end_ts]
 
     return df.reset_index(drop=True)

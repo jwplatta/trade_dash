@@ -15,7 +15,7 @@ def realized_vol(prices: pd.Series, window: int, ann_factor: int = 252) -> pd.Se
     Matches docs/IV_RV_Comparison.ipynb notebook.
     """
     ratio: pd.Series = prices / prices.shift(1)
-    log_returns: pd.Series = ratio.apply(np.log)
+    log_returns: pd.Series = np.log(ratio)
     squared: pd.Series = log_returns**2
     rolling_sum: pd.Series = squared.rolling(window=window).sum()
     return pd.Series(

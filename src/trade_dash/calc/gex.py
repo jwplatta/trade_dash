@@ -55,14 +55,20 @@ def net_gex_by_strike(
 def net_gex_by_price(
     opts: pd.DataFrame,
     spot: float,
+    snap_time: pd.Timestamp | None = None,
     price_range: float = 300.0,
-    n_points: int = 601,
 ) -> pd.DataFrame:
     """Compute net GEX on a price grid using Black-Scholes gamma.
 
-    Returns DataFrame[price, net_gex].
-    Port the algorithm from docs/intraday.py::calculate_zero_gamma_line
-    but return the full grid (not just the ZGL crossing).
+    Returns DataFrame[price, net_gex] on an integer-spaced grid matching
+    docs/intraday.py::calculate_zero_gamma_line.
+
+    Args:
+        opts: Options snapshot DataFrame.
+        spot: Current underlying price used as grid centre.
+        snap_time: Reference time for T computation. Defaults to pd.Timestamp.now()
+            when None, but callers should pass an explicit value for determinism.
+        price_range: Half-width of the price grid in points (default 300).
     """
     df = opts.copy()
 
@@ -71,17 +77,7 @@ def net_gex_by_price(
         hours=15, minutes=15
     )
 
-    # Time to expiry: use the expiration_dt as-is, compute relative to a fixed ref.
-    # For a pure function we compute T from the expiration datetime relative to now=0.
-    # In practice, the caller should ensure opts has a T column or we use the expiration date.
-    # We compute T from epoch to expiration as a relative time in years.
-    # To stay pure (no datetime.now()), we compute T using raw timestamps and
-    # treat the snap time as the fetch time embedded in the data. We use the
-    # same approach as docs/intraday.py but accept that T is computed from a
-    # reference that makes the values reasonable.
-    # NOTE: We use pd.Timestamp.now() only for T computation since this is a
-    # calculation function without I/O; it reads system time for the grid calc.
-    now = pd.Timestamp.now()
+    now = snap_time if snap_time is not None else pd.Timestamp.now()
     df["T"] = (df["expiration_dt"] - now).dt.total_seconds() / (365.0 * 24 * 3600)
     df["T"] = df["T"].clip(lower=(5.0 / (365.0 * 24 * 60)))
 
@@ -101,7 +97,7 @@ def net_gex_by_price(
     iv_arr = df["iv"].to_numpy(dtype=float)
     oi_arr = df["OI"].to_numpy(dtype=float)
 
-    prices_grid = np.linspace(spot - price_range, spot + price_range, n_points)
+    prices_grid = np.arange(round(spot) - price_range, round(spot) + price_range + 1, 1.0)
 
     net_gex_vals: list[float] = []
     for p in prices_grid:
