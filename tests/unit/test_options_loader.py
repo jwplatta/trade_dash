@@ -18,7 +18,7 @@ def test_find_latest_snapshots_returns_paths() -> None:
     today = date.today()
     snapshots = find_latest_snapshots("SPXW", start_date=today, days_out=10)
     assert isinstance(snapshots, dict)
-    for exp_date, path in snapshots.items():
+    for _, path in snapshots.items():
         assert path.exists(), f"Snapshot file missing: {path}"
 
 

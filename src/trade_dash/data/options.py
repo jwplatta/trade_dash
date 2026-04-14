@@ -3,13 +3,14 @@ from __future__ import annotations
 
 from datetime import date, datetime
 from pathlib import Path
+from typing import Any
 
 import pandas as pd
 import streamlit as st
 
 from trade_dash.config import OPTIONS_DIR
 
-_OPTIONS_DTYPES: dict[str, str] = {
+_OPTIONS_DTYPES: dict[str, Any] = {
     "strike": "float64",
     "open_interest": "float64",
     "gamma": "float64",
@@ -84,6 +85,6 @@ def find_latest_snapshots(
 @st.cache_data(ttl=3600)
 def load_options_snapshot(path: Path) -> pd.DataFrame:
     """Load a single options snapshot CSV with typed columns."""
-    df = pd.read_csv(path, dtype=_OPTIONS_DTYPES)
+    df = pd.read_csv(path, dtype=_OPTIONS_DTYPES)  # type: ignore[arg-type]
     df["expiration_date"] = pd.to_datetime(df["expiration_date"])
     return df
