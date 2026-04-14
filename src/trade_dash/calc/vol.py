@@ -40,8 +40,7 @@ def vix_spx_correlation(spx: pd.DataFrame, vix: pd.DataFrame) -> float:
     ).dropna()
     if len(merged) < 2:
         return float("nan")
-    corr, _ = pearsonr(merged["spx"].to_numpy(), merged["vix"].to_numpy())
-    return float(corr)
+    return float(pearsonr(merged["spx"].to_numpy(), merged["vix"].to_numpy()).statistic)
 
 
 def expected_move(spot: float, vix9d_close: float) -> tuple[float, float]:

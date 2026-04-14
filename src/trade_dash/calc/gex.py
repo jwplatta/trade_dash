@@ -144,10 +144,7 @@ def find_zero_gamma_level(
     x1, x2 = float(prices[i]), float(prices[i + 1])
     y1, y2 = float(gex[i]), float(gex[i + 1])
 
-    if y2 != y1:
-        zgl = x1 + (0.0 - y1) * (x2 - x1) / (y2 - y1)
-    else:
-        zgl = (x1 + x2) / 2.0
+    zgl = x1 + (0.0 - y1) * (x2 - x1) / (y2 - y1) if y2 != y1 else (x1 + x2) / 2.0
 
     return float(zgl)
 
@@ -157,9 +154,10 @@ def find_call_wall(strike_gex: pd.DataFrame) -> tuple[float, float]:
     pos = strike_gex[strike_gex["net_gex"] > 0]
     if pos.empty:
         return float("nan"), float("nan")
-    idx = pos["net_gex"].idxmax()
-    row = pos.loc[idx]
-    return float(row["strike"]), float(row["net_gex"])
+    strikes = pos["strike"].to_numpy(dtype=float)
+    gex_vals = pos["net_gex"].to_numpy(dtype=float)
+    i = int(gex_vals.argmax())
+    return float(strikes[i]), float(gex_vals[i])
 
 
 def find_put_wall(strike_gex: pd.DataFrame) -> tuple[float, float]:
@@ -167,6 +165,7 @@ def find_put_wall(strike_gex: pd.DataFrame) -> tuple[float, float]:
     neg = strike_gex[strike_gex["net_gex"] < 0]
     if neg.empty:
         return float("nan"), float("nan")
-    idx = neg["net_gex"].idxmin()
-    row = neg.loc[idx]
-    return float(row["strike"]), float(row["net_gex"])
+    strikes = neg["strike"].to_numpy(dtype=float)
+    gex_vals = neg["net_gex"].to_numpy(dtype=float)
+    i = int(gex_vals.argmin())
+    return float(strikes[i]), float(gex_vals[i])

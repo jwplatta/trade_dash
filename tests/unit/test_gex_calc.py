@@ -51,7 +51,7 @@ def test_find_call_wall_returns_positive_gex(spxw_opts: pd.DataFrame) -> None:
 def test_find_put_wall_returns_negative_gex(spxw_opts: pd.DataFrame) -> None:
     spot = float(spxw_opts["underlying_price"].iloc[0])
     strike_gex = net_gex_by_strike(spxw_opts, spot=spot)
-    strike, level = find_put_wall(strike_gex)
+    _, level = find_put_wall(strike_gex)
     assert level < 0
 
 
