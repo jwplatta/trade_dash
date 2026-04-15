@@ -32,15 +32,14 @@ def render_gamma_map_tab(options_dir: Path, candle_dir: Path) -> None:
             symbol = str(
                 st.selectbox("Symbol", ["SPXW", "SPX", "QQQ", "DIA"], index=0, key="gm_symbol")
             )
-            _range_defaults = {"SPXW": 300, "SPX": 300, "QQQ": 100, "DIA": 50}
-            strike_range = int(
-                st.number_input(
-                    "Strike range (±pts)",
-                    min_value=25,
-                    max_value=1000,
-                    value=_range_defaults.get(symbol, 300),
-                    step=25,
-                    key=f"gm_range_{symbol}",
+            range_pct = float(
+                st.slider(
+                    "Strike range (% of spot)",
+                    min_value=1,
+                    max_value=25,
+                    value=5,
+                    step=1,
+                    key="gm_range_pct",
                 )
             )
 
@@ -68,6 +67,7 @@ def render_gamma_map_tab(options_dir: Path, candle_dir: Path) -> None:
                 st.error("No valid underlying_price in options data.")
             return
         spot = float(spot_series.iloc[0])
+        strike_range = round(spot * range_pct / 100)
 
         strike_gex = net_gex_by_strike(all_opts, spot=spot, strike_range=strike_range)
         with st.spinner("Computing GEX by price grid..."):
