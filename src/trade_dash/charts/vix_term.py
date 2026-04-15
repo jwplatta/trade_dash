@@ -6,11 +6,23 @@ import pandas as pd
 import plotly.graph_objects as go
 
 
+def _rangebreaks(freq: str) -> list[dict]:
+    breaks: list[dict] = [{"bounds": ["sat", "mon"]}]
+    if freq != "day":
+        breaks.append({"bounds": [21, 14.5], "pattern": "hour"})
+    return breaks
+
+
+def _tickformat(freq: str) -> str:
+    return "%Y-%m-%d" if freq == "day" else "%m/%d %H:%M"
+
+
 def build_vix_term_chart(
     vix: pd.DataFrame,
     vix9d: pd.DataFrame,
     vix1d: pd.DataFrame | None = None,
     title: str = "VIX Term Structure",
+    freq: str = "day",
 ) -> go.Figure:
     """Line chart: VIX vs VIX9D (vs VIX1D if provided) for contango check."""
     fig = go.Figure()
@@ -41,10 +53,14 @@ def build_vix_term_chart(
         )
     fig.update_layout(
         title=title,
-        xaxis_title="Date/Time",
+        xaxis_title="Date" if freq == "day" else "Date / Time",
         yaxis_title="VIX Level",
         template="plotly_dark",
         legend={"orientation": "h", "y": 1.02},
         margin={"l": 40, "r": 20, "t": 40, "b": 40},
+        xaxis={
+            "rangebreaks": _rangebreaks(freq),
+            "tickformat": _tickformat(freq),
+        },
     )
     return fig
