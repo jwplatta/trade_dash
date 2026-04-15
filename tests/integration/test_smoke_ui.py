@@ -1,7 +1,7 @@
 """Playwright smoke tests for the trade_dash Streamlit UI."""
+
 from __future__ import annotations
 
-import pytest
 from playwright.sync_api import Page, expect
 
 
