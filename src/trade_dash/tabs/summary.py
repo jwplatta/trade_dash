@@ -9,7 +9,7 @@ from pathlib import Path
 import pandas as pd
 import streamlit as st
 
-from trade_dash.calc.gex import find_call_wall, find_put_wall, net_gex_by_strike
+from trade_dash.calc.gex import net_gex_by_strike
 from trade_dash.calc.ma import validate_windows
 from trade_dash.calc.vol import expected_move, realized_vol
 from trade_dash.charts.price import build_sma_price_chart
@@ -73,8 +73,16 @@ def render_summary_tab(candle_dir: Path, options_dir: Path) -> None:
             [load_options_snapshot(p) for p in snapshots.values()], ignore_index=True
         )
         strike_gex = net_gex_by_strike(all_opts, spot=spot)
-        call_strike, call_level = find_call_wall(strike_gex)
-        put_strike, put_level = find_put_wall(strike_gex)
+        pos = strike_gex[strike_gex["net_gex"] > 0]
+        neg = strike_gex[strike_gex["net_gex"] < 0]
+        call_strike = (
+            float(pos.loc[pos["net_gex"].idxmax(), "strike"]) if not pos.empty else float("nan")
+        )
+        call_level = float(pos["net_gex"].max()) if not pos.empty else float("nan")
+        put_strike = (
+            float(neg.loc[neg["net_gex"].idxmin(), "strike"]) if not neg.empty else float("nan")
+        )
+        put_level = float(neg["net_gex"].min()) if not neg.empty else float("nan")
 
         col1, col2 = st.columns(2)
         col1.metric("Call Wall Strike", f"{call_strike:.0f}", f"GEX: {call_level:,.0f}")
