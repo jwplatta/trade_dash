@@ -21,7 +21,10 @@ def render_vol_tab(candle_dir: Path) -> None:
     with col1:
         window_choice = st.radio("Window", ["9D", "30D"], horizontal=True, key="vol_window")
     with col2:
-        freq = st.selectbox("Frequency", ["day", "1min", "5min", "30min"], index=0, key="vol_freq")
+        freq = (
+            st.selectbox("Frequency", ["day", "1min", "5min", "30min"], index=0, key="vol_freq")
+            or "day"
+        )
 
     window = 9 if window_choice == "9D" else 30
     iv_symbol = "VIX9D" if window_choice == "9D" else "VIX"
@@ -64,7 +67,7 @@ def render_vol_tab(candle_dir: Path) -> None:
         corr = vix_spx_correlation(spx, vix_full)
         st.metric(f"VIX-SPX Correlation ({freq})", f"{corr:.3f}")
     except FileNotFoundError:
-        pass
+        st.info(f"VIX data not available for frequency {freq}.")
 
     fig = build_iv_rv_chart(
         iv=merged["iv"],

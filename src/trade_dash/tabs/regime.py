@@ -18,7 +18,10 @@ def render_regime_tab(candle_dir: Path) -> None:
 
     col1, col2, col3 = st.columns(3)
     with col1:
-        freq = st.selectbox("Frequency", ["1min", "5min", "30min", "day"], index=1, key="reg_freq")
+        freq = (
+            st.selectbox("Frequency", ["1min", "5min", "30min", "day"], index=1, key="reg_freq")
+            or "5min"
+        )
     with col2:
         fast_window = int(st.number_input("Fast MA", min_value=1, value=9, key="reg_fast"))
         slow_window = int(st.number_input("Slow MA", min_value=2, value=21, key="reg_slow"))

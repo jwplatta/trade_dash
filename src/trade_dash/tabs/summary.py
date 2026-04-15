@@ -53,13 +53,16 @@ def render_summary_tab(candle_dir: Path, options_dir: Path) -> None:
     spread_9 = (
         vix9d_close - float(rv9.iloc[-1]) if (not rv9.empty and vix9d is not None) else float("nan")
     )
-    lower, upper = expected_move(spot=spot, vix9d_close=vix9d_close)
-
     col1, col2, col3, col4 = st.columns(4)
     col1.metric("IV−RV (30D)", f"{spread_30:.2f}" if not math.isnan(spread_30) else "N/A")
     col2.metric("IV−RV (9D)", f"{spread_9:.2f}" if not math.isnan(spread_9) else "N/A")
-    col3.metric("Expected Move ↑", f"{upper:.1f}")
-    col4.metric("Expected Move ↓", f"{lower:.1f}")
+    if not math.isnan(vix9d_close):
+        lower, upper = expected_move(spot=spot, vix9d_close=vix9d_close)
+        col3.metric("Expected Move ↑", f"{upper:.1f}")
+        col4.metric("Expected Move ↓", f"{lower:.1f}")
+    else:
+        col3.metric("Expected Move ↑", "N/A")
+        col4.metric("Expected Move ↓", "N/A")
 
     today = date.today()
     snapshots = find_latest_snapshots(
