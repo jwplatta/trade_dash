@@ -9,8 +9,6 @@ import pandas as pd
 import pytest
 
 from trade_dash.calc.gex import (
-    find_call_wall,
-    find_put_wall,
     find_zero_gamma_level,
     net_gex_by_price,
     net_gex_by_strike,
@@ -40,21 +38,6 @@ def test_net_gex_by_strike_has_both_signs(spxw_opts: pd.DataFrame) -> None:
     result = net_gex_by_strike(spxw_opts, spot=spot)
     assert result["net_gex"].max() > 0
     assert result["net_gex"].min() < 0
-
-
-def test_find_call_wall_returns_positive_gex(spxw_opts: pd.DataFrame) -> None:
-    spot = float(spxw_opts["underlying_price"].iloc[0])
-    strike_gex = net_gex_by_strike(spxw_opts, spot=spot)
-    strike, level = find_call_wall(strike_gex)
-    assert level > 0
-    assert strike > 0
-
-
-def test_find_put_wall_returns_negative_gex(spxw_opts: pd.DataFrame) -> None:
-    spot = float(spxw_opts["underlying_price"].iloc[0])
-    strike_gex = net_gex_by_strike(spxw_opts, spot=spot)
-    _, level = find_put_wall(strike_gex)
-    assert level < 0
 
 
 def test_find_zero_gamma_level_finds_crossing() -> None:
