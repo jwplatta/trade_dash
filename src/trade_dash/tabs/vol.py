@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import contextlib
-from datetime import date
+from datetime import date, timedelta
 from pathlib import Path
 
 import pandas as pd
@@ -42,11 +42,15 @@ def render_vol_tab(candle_dir: Path) -> None:
     window = 9 if window_choice == "9D" else 30
     iv_symbol = "VIX9D" if window_choice == "9D" else "VIX"
 
-    spx = load_candles("SPX", str(freq), start=start_sel, end=end_sel, data_dir=candle_dir)
+    # Load extra calendar days before start so the rolling window has enough bars.
+    # window * 3 calendar days is a safe buffer for both day and intraday freqs.
+    lookback_start = date.fromisoformat(str(start_sel)) - timedelta(days=window * 3)
+
+    spx = load_candles("SPX", str(freq), start=lookback_start, end=end_sel, data_dir=candle_dir)
 
     try:
         iv_candles = load_candles(
-            iv_symbol, str(freq), start=start_sel, end=end_sel, data_dir=candle_dir
+            iv_symbol, str(freq), start=lookback_start, end=end_sel, data_dir=candle_dir
         )
     except FileNotFoundError:
         with col_chart:
@@ -60,6 +64,10 @@ def render_vol_tab(candle_dir: Path) -> None:
         on="datetime",
         how="inner",
     ).dropna()
+
+    # Trim lookback rows — only display from the user's chosen start date
+    start_trim = pd.Timestamp(start_sel, tz="UTC")
+    merged = merged[merged["datetime"] >= start_trim].reset_index(drop=True)
 
     if merged.empty:
         with col_chart:
