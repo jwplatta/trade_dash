@@ -39,12 +39,19 @@ def render_vol_tab(candle_dir: Path) -> None:
         start_sel = st.date_input("Start", value=default_start, key="vol_start")
         end_sel = st.date_input("End", value=end_avail.date(), key="vol_end")
 
-    window = 9 if window_choice == "9D" else 30
+    window_days = 9 if window_choice == "9D" else 30
     iv_symbol = "VIX9D" if window_choice == "9D" else "VIX"
 
+    # Bars per trading day — used to scale the rolling window and annualization factor
+    # so intraday RV is comparable to VIX (annualized, N-day window).
+    _bars_per_day = {"day": 1, "30min": 13, "5min": 78, "1min": 390}
+    f_per_day = _bars_per_day.get(str(freq), 1)
+    window_bars = window_days * f_per_day
+    ann_factor = 252 * f_per_day
+
     # Load extra calendar days before start so the rolling window has enough bars.
-    # window * 3 calendar days is a safe buffer for both day and intraday freqs.
-    lookback_start = date.fromisoformat(str(start_sel)) - timedelta(days=window * 3)
+    # window_days * 3 calendar days is a safe buffer for both day and intraday freqs.
+    lookback_start = date.fromisoformat(str(start_sel)) - timedelta(days=window_days * 3)
 
     spx = load_candles("SPX", str(freq), start=lookback_start, end=end_sel, data_dir=candle_dir)
 
@@ -57,7 +64,7 @@ def render_vol_tab(candle_dir: Path) -> None:
             st.error(f"{iv_symbol} data not available for frequency {freq}.")
         return
 
-    rv = realized_vol(spx["close"], window=window)
+    rv = realized_vol(spx["close"], window=window_bars, ann_factor=ann_factor)
     merged = pd.merge(
         spx[["datetime"]].assign(rv=rv.values),
         iv_candles[["datetime", "close"]].rename(columns={"close": "iv"}),
