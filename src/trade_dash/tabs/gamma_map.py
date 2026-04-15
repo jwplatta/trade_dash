@@ -32,6 +32,17 @@ def render_gamma_map_tab(options_dir: Path, candle_dir: Path) -> None:
             symbol = str(
                 st.selectbox("Symbol", ["SPXW", "SPX", "QQQ", "DIA"], index=0, key="gm_symbol")
             )
+            _range_defaults = {"SPXW": 300, "SPX": 300, "QQQ": 100, "DIA": 50}
+            strike_range = int(
+                st.number_input(
+                    "Strike range (±pts)",
+                    min_value=25,
+                    max_value=1000,
+                    value=_range_defaults.get(symbol, 300),
+                    step=25,
+                    key=f"gm_range_{symbol}",
+                )
+            )
 
         today = date.today()
         snapshots = find_latest_snapshots(
@@ -58,9 +69,9 @@ def render_gamma_map_tab(options_dir: Path, candle_dir: Path) -> None:
             return
         spot = float(spot_series.iloc[0])
 
-        strike_gex = net_gex_by_strike(all_opts, spot=spot)
+        strike_gex = net_gex_by_strike(all_opts, spot=spot, strike_range=strike_range)
         with st.spinner("Computing GEX by price grid..."):
-            price_gex = net_gex_by_price(all_opts, spot=spot)
+            price_gex = net_gex_by_price(all_opts, spot=spot, price_range=strike_range)
 
         fig_agg = build_gex_aggregate_chart(
             strike_gex, price_gex, spot, title=f"{symbol} GEX Aggregate ({days_out}d)"
@@ -99,7 +110,10 @@ def render_gamma_map_tab(options_dir: Path, candle_dir: Path) -> None:
                 if single_snapshots:
                     single_opts = load_options_snapshot(next(iter(single_snapshots.values())))
                     fig_single = build_gex_single_expiry_chart(
-                        single_opts, spot=spot, title=f"{symbol} GEX {selected_exp}"
+                        single_opts,
+                        spot=spot,
+                        strike_range=strike_range,
+                        title=f"{symbol} GEX {selected_exp}",
                     )
                     st.subheader("GEX Single Expiry")
                     st.plotly_chart(fig_single, use_container_width=True)
