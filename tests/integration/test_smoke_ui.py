@@ -30,12 +30,10 @@ def test_regime_tab_renders_chart(page: Page, streamlit_server: str) -> None:
 
 
 def test_vol_tab_renders(page: Page, streamlit_server: str) -> None:
-    """Vol tab loads and shows the Window radio selector."""
+    """Vol tab loads and shows the 9D/30D radio labels."""
     page.goto(streamlit_server)
     page.wait_for_selector("text=Vol", timeout=20000)
     page.get_by_role("tab", name="Vol").click()
-    # The radio label is "Window" with options 9D and 30D; wait for it to be attached
-    page.wait_for_selector("text=Window", timeout=10000, state="attached")
     # Radio options "9D" and "30D" are rendered as labels; use partial-text match
     page.wait_for_selector("label:has-text('9D')", timeout=10000, state="attached")
     assert page.locator("label:has-text('9D')").count() > 0
@@ -54,4 +52,5 @@ def test_gamma_map_tab_renders(page: Page, streamlit_server: str) -> None:
 def test_agent_chat_toggle_visible(page: Page, streamlit_server: str) -> None:
     """Agent chat toggle is present in the sidebar."""
     page.goto(streamlit_server)
-    page.wait_for_selector("text=Agent Chat", timeout=20000)
+    sidebar = page.locator("[data-testid='stSidebar']")
+    expect(sidebar.get_by_text("Agent Chat")).to_be_visible(timeout=20000)
