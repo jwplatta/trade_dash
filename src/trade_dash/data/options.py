@@ -56,7 +56,7 @@ def list_expirations(
     return sorted(seen)
 
 
-@st.cache_data(ttl=300)
+@st.cache_data(ttl=30)
 def find_latest_snapshots(
     symbol: str,
     start_date: date,
