@@ -4,55 +4,41 @@ from __future__ import annotations
 
 import streamlit as st
 
-from trade_dash.dashboard import pnl_timeseries, portfolio_metrics, sample_positions
+from trade_dash.config import CANDLE_DIR, OPTIONS_DIR
+from trade_dash.tabs.gamma_map import render_gamma_map_tab
+from trade_dash.tabs.regime import render_regime_tab
+from trade_dash.tabs.summary import render_summary_tab
+from trade_dash.tabs.vol import render_vol_tab
 
 
 def render_dashboard() -> None:
-    """Render the main Streamlit dashboard."""
+    """Render the main 4-tab Streamlit dashboard."""
     st.set_page_config(
         page_title="trade_dash",
         page_icon=":chart_with_upwards_trend:",
         layout="wide",
     )
 
-    positions = sample_positions()
-    metrics = portfolio_metrics(positions)
-    history = pnl_timeseries()
-
-    st.title("trade_dash")
-    st.caption("Streamlit trading dashboard scaffold with sample portfolio data.")
-
-    metric_columns = st.columns(len(metrics))
-    for column, metric in zip(metric_columns, metrics, strict=True):
-        column.metric(metric.label, metric.value, metric.delta)
-
-    left, right = st.columns((1.5, 1))
-
-    with left:
-        st.subheader("Portfolio P&L")
-        st.line_chart(history, x="day", y="net_pnl", use_container_width=True)
-
-        st.subheader("Positions")
-        st.dataframe(positions, use_container_width=True, hide_index=True)
-
-    with right:
-        st.subheader("Watchlist")
-        st.markdown(
-            "\n".join(
-                [
-                    "- `NVDA` momentum continues above the 20-day trend.",
-                    "- `AAPL` earnings week implied move is elevated.",
-                    "- `TSLA` volume expansion warrants a volatility check.",
-                ]
+    with st.sidebar:
+        st.title("trade_dash")
+        show_chat = st.toggle("Agent Chat", value=False)
+        if show_chat:
+            st.subheader("Agent Chat")
+            st.info(
+                "Agent integration coming soon. Chat will be fed the same data as the active panel."
             )
-        )
+            st.chat_input("Ask about the charts...", disabled=True)
 
-        st.subheader("Notes")
-        st.info(
-            "Replace the sample data sources in `trade_dash.dashboard` with your market feeds, "
-            "portfolio feeds, or both, then extend the layout with filters, charts, and account "
-            "views."
-        )
+    tab0, tab1, tab2, tab3 = st.tabs(["Summary", "Regime", "Vol", "Gamma Map"])
+
+    with tab0:
+        render_summary_tab(candle_dir=CANDLE_DIR, options_dir=OPTIONS_DIR)
+    with tab1:
+        render_regime_tab(candle_dir=CANDLE_DIR)
+    with tab2:
+        render_vol_tab(candle_dir=CANDLE_DIR)
+    with tab3:
+        render_gamma_map_tab(options_dir=OPTIONS_DIR, candle_dir=CANDLE_DIR)
 
 
 if __name__ == "__main__":
