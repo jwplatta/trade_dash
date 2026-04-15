@@ -66,6 +66,7 @@ def build_gex_single_expiry_chart(
     fig.update_layout(
         title=title,
         xaxis_title="Strike",
+        xaxis={"dtick": 25},
         yaxis_title="GEX",
         barmode="group",
         template="plotly_dark",

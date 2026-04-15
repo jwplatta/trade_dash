@@ -142,25 +142,3 @@ def find_zero_gamma_level(
     zgl = x1 + (0.0 - y1) * (x2 - x1) / (y2 - y1) if y2 != y1 else (x1 + x2) / 2.0
 
     return float(zgl)
-
-
-def find_call_wall(strike_gex: pd.DataFrame) -> tuple[float, float]:
-    """Return (strike, net_gex) for the largest positive net GEX."""
-    pos = strike_gex[strike_gex["net_gex"] > 0]
-    if pos.empty:
-        return float("nan"), float("nan")
-    strikes = pos["strike"].to_numpy(dtype=float)
-    gex_vals = pos["net_gex"].to_numpy(dtype=float)
-    i = int(gex_vals.argmax())
-    return float(strikes[i]), float(gex_vals[i])
-
-
-def find_put_wall(strike_gex: pd.DataFrame) -> tuple[float, float]:
-    """Return (strike, net_gex) for the largest negative net GEX."""
-    neg = strike_gex[strike_gex["net_gex"] < 0]
-    if neg.empty:
-        return float("nan"), float("nan")
-    strikes = neg["strike"].to_numpy(dtype=float)
-    gex_vals = neg["net_gex"].to_numpy(dtype=float)
-    i = int(gex_vals.argmin())
-    return float(strikes[i]), float(gex_vals[i])

@@ -72,6 +72,7 @@ def build_gex_aggregate_chart(
     fig.update_layout(
         title=title,
         xaxis_title="Strike / Price",
+        xaxis={"dtick": 25},
         yaxis_title="Net GEX",
         template="plotly_dark",
         legend={"orientation": "h", "y": 1.02},
