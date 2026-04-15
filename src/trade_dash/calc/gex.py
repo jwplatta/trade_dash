@@ -1,4 +1,5 @@
 """GEX (Gamma Exposure) calculation functions."""
+
 from __future__ import annotations
 
 import math
@@ -73,9 +74,7 @@ def net_gex_by_price(
     df = opts.copy()
 
     # Parse expiration datetime (3 PM CT expiry)
-    df["expiration_dt"] = pd.to_datetime(df["expiration_date"]) + pd.Timedelta(
-        hours=15, minutes=15
-    )
+    df["expiration_dt"] = pd.to_datetime(df["expiration_date"]) + pd.Timedelta(hours=15, minutes=15)
 
     now = snap_time if snap_time is not None else pd.Timestamp.now()
     df["T"] = (df["expiration_dt"] - now).dt.total_seconds() / (365.0 * 24 * 3600)

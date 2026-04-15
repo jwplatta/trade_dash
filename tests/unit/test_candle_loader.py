@@ -1,4 +1,5 @@
 """Tests for the candle data loader."""
+
 from __future__ import annotations
 
 from datetime import date, datetime

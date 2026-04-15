@@ -1,4 +1,5 @@
 """IV-RV spread chart: 3 lines on one figure."""
+
 from __future__ import annotations
 
 import pandas as pd
@@ -13,19 +14,33 @@ def build_iv_rv_chart(
     window_label: str = "30D",
 ) -> go.Figure:
     """Three-line chart: IV (VIX/VIX9D), Realized Vol, and IV-RV spread."""
+    if not (len(iv) == len(rv) == len(spread) == len(datetimes)):
+        raise ValueError("iv, rv, spread, and datetimes must all have the same length")
     fig = go.Figure()
-    fig.add_trace(go.Scatter(
-        x=datetimes, y=iv, name=f"IV ({window_label})",
-        line={"color": "cyan", "width": 2},
-    ))
-    fig.add_trace(go.Scatter(
-        x=datetimes, y=rv, name=f"Realized Vol ({window_label})",
-        line={"color": "orange", "width": 2},
-    ))
-    fig.add_trace(go.Scatter(
-        x=datetimes, y=spread, name="IV − RV Spread",
-        line={"color": "yellow", "width": 1.5, "dash": "dot"},
-    ))
+    fig.add_trace(
+        go.Scatter(
+            x=datetimes,
+            y=iv,
+            name=f"IV ({window_label})",
+            line={"color": "cyan", "width": 2},
+        )
+    )
+    fig.add_trace(
+        go.Scatter(
+            x=datetimes,
+            y=rv,
+            name=f"Realized Vol ({window_label})",
+            line={"color": "orange", "width": 2},
+        )
+    )
+    fig.add_trace(
+        go.Scatter(
+            x=datetimes,
+            y=spread,
+            name="IV − RV Spread",
+            line={"color": "yellow", "width": 1.5, "dash": "dot"},
+        )
+    )
     fig.add_hline(y=0, line_color="white", line_width=0.5)
     fig.update_layout(
         title=f"IV vs Realized Volatility ({window_label})",

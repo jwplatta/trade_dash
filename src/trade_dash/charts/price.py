@@ -1,4 +1,5 @@
 """SMA price line chart."""
+
 from __future__ import annotations
 
 import pandas as pd
@@ -19,18 +20,31 @@ def build_sma_price_chart(
     slow_ma = sma(candles["close"], window=slow_window)
 
     fig = go.Figure()
-    fig.add_trace(go.Scatter(
-        x=candles["datetime"], y=candles["close"],
-        name="Close", line={"color": "white", "width": 1}, opacity=0.7,
-    ))
-    fig.add_trace(go.Scatter(
-        x=candles["datetime"], y=fast_ma,
-        name=f"Fast MA ({fast_window})", line={"color": "orange", "width": 1.5},
-    ))
-    fig.add_trace(go.Scatter(
-        x=candles["datetime"], y=slow_ma,
-        name=f"Slow MA ({slow_window})", line={"color": "cyan", "width": 1.5},
-    ))
+    fig.add_trace(
+        go.Scatter(
+            x=candles["datetime"],
+            y=candles["close"],
+            name="Close",
+            line={"color": "white", "width": 1},
+            opacity=0.7,
+        )
+    )
+    fig.add_trace(
+        go.Scatter(
+            x=candles["datetime"],
+            y=fast_ma,
+            name=f"Fast MA ({fast_window})",
+            line={"color": "orange", "width": 1.5},
+        )
+    )
+    fig.add_trace(
+        go.Scatter(
+            x=candles["datetime"],
+            y=slow_ma,
+            name=f"Slow MA ({slow_window})",
+            line={"color": "cyan", "width": 1.5},
+        )
+    )
     fig.update_layout(
         title=title,
         xaxis_title="Date/Time",

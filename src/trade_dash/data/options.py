@@ -1,4 +1,5 @@
 """Options chain snapshot loader."""
+
 from __future__ import annotations
 
 from datetime import date, datetime
