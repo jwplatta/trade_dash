@@ -14,6 +14,7 @@ from trade_dash.calc.gex import (
 )
 from trade_dash.charts.gex_aggregate import build_gex_aggregate_chart
 from trade_dash.charts.gex_single import build_gex_single_expiry_chart
+from trade_dash.charts.vol_skew import build_vol_skew_chart
 from trade_dash.data.options import find_latest_snapshots, list_expirations, load_options_snapshot
 
 
@@ -117,5 +118,14 @@ def render_gamma_map_tab(options_dir: Path, candle_dir: Path) -> None:
                     )
                     st.subheader("GEX Single Expiry")
                     st.plotly_chart(fig_single, use_container_width=True)
+
+                    fig_skew = build_vol_skew_chart(
+                        single_opts,
+                        spot=spot,
+                        strike_range=strike_range,
+                        title=f"{symbol} Vol Skew {selected_exp}",
+                    )
+                    st.subheader("Volatility Skew")
+                    st.plotly_chart(fig_skew, use_container_width=True)
 
     _render()
