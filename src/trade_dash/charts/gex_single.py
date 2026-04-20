@@ -68,7 +68,7 @@ def build_gex_single_expiry_chart(
         xaxis_title="Strike",
         xaxis={"dtick": 25},
         yaxis_title="GEX",
-        barmode="group",
+        barmode="overlay",
         template="plotly_dark",
         legend={"orientation": "h", "y": 1.02},
         margin={"l": 40, "r": 20, "t": 40, "b": 40},

@@ -10,6 +10,7 @@ import pandas as pd
 import streamlit as st
 
 from trade_dash.calc.vol import iv_rv_spread, realized_vol, vix_spx_correlation
+from trade_dash.charts.rv_acceleration import build_rv_acceleration_chart
 from trade_dash.charts.vix_term import build_vix_term_chart
 from trade_dash.charts.vol_spread import build_iv_rv_chart
 from trade_dash.data.candles import list_available_dates, load_candles
@@ -39,6 +40,13 @@ def render_vol_tab(candle_dir: Path) -> None:
         start_sel = st.date_input("Start", value=default_start, key="vol_start")
         end_sel = st.date_input("End", value=end_avail.date(), key="vol_end")
 
+        st.divider()
+        rv_fast_days = int(st.number_input("RV Fast (days)", min_value=1, value=3, key="vol_rv_fast"))
+        rv_slow_days = int(st.number_input("RV Slow (days)", min_value=2, value=10, key="vol_rv_slow"))
+        if rv_fast_days >= rv_slow_days:
+            st.error(f"RV fast ({rv_fast_days}) must be less than slow ({rv_slow_days}).")
+            return
+
     window_days = 9 if window_choice == "9D" else 30
     iv_symbol = "VIX9D" if window_choice == "9D" else "VIX"
 
@@ -51,7 +59,9 @@ def render_vol_tab(candle_dir: Path) -> None:
 
     # Load extra calendar days before start so the rolling window has enough bars.
     # window_days * 3 calendar days is a safe buffer for both day and intraday freqs.
-    lookback_start = date.fromisoformat(str(start_sel)) - timedelta(days=window_days * 3)
+    # Also covers the RV acceleration slow window.
+    lookback_days = max(window_days, rv_slow_days) * 3
+    lookback_start = date.fromisoformat(str(start_sel)) - timedelta(days=lookback_days)
 
     spx = load_candles("SPX", str(freq), start=lookback_start, end=end_sel, data_dir=candle_dir)
 
@@ -120,3 +130,19 @@ def render_vol_tab(candle_dir: Path) -> None:
             )
         except FileNotFoundError as e:
             st.info(f"VIX term structure incomplete: {e}")
+
+        rv_fig = build_rv_acceleration_chart(
+            spx,
+            fast_days=rv_fast_days,
+            slow_days=rv_slow_days,
+            freq=str(freq),
+            title=f"SPX RV Acceleration — {rv_fast_days}d vs {rv_slow_days}d",
+        )
+        start_trim = pd.Timestamp(start_sel, tz="UTC")
+        if str(freq) in {"1min", "5min", "30min"}:
+            mask = spx["datetime"] >= start_trim
+            display_start = int(mask.idxmax()) if mask.any() else 0
+            rv_fig.update_xaxes(range=[display_start - 0.5, len(spx) - 0.5])
+        else:
+            rv_fig.update_xaxes(range=[start_trim, pd.Timestamp(end_sel, tz="UTC") + pd.Timedelta(days=1)])
+        st.plotly_chart(rv_fig, use_container_width=True)

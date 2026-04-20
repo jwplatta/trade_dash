@@ -19,6 +19,7 @@ def realized_vol(prices: pd.Series, window: int, ann_factor: int = 252) -> pd.Se
     log_returns: pd.Series = np.log(ratio)
     squared: pd.Series = log_returns**2
     rolling_sum: pd.Series = squared.rolling(window=window).sum()
+    
     return pd.Series(
         100.0 * np.sqrt(ann_factor / window * rolling_sum),
         index=prices.index,
