@@ -9,19 +9,20 @@ import pandas as pd
 from scipy.stats import pearsonr
 
 
-def realized_vol(prices: pd.Series, window: int, ann_factor: int = 252) -> pd.Series:
-    """Annualized realized volatility from log returns.
+def realized_vol(prices: pd.Series, window: int, periods_per_year: int = 252) -> pd.Series:
+    """Horizon-matched annualized realized volatility from log returns.
 
-    Formula: 100 * sqrt(ann_factor / window * rolling_sum(log_return²))
-    Matches docs/IV_RV_Comparison.ipynb notebook.
+    Formula: 100 * sqrt((periods_per_year / window) * rolling_sum(log_return²))
+
+    This matches the VIX construction: annualized variance is the sum of squared
+    returns over the horizon scaled by (A / H_bars), where A is periods per year
+    and H_bars is the window length. Use window=trading days in horizon and
+    periods_per_year=252 for daily data; scale both proportionally for intraday.
     """
-    ratio: pd.Series = prices / prices.shift(1)
-    log_returns: pd.Series = np.log(ratio)
-    squared: pd.Series = log_returns**2
-    rolling_sum: pd.Series = squared.rolling(window=window).sum()
-    
+    log_returns: pd.Series = np.log(prices / prices.shift(1))
+    rolling_sum: pd.Series = (log_returns ** 2).rolling(window=window).sum()
     return pd.Series(
-        100.0 * np.sqrt(ann_factor / window * rolling_sum),
+        100.0 * np.sqrt((periods_per_year / window) * rolling_sum),
         index=prices.index,
     )
 

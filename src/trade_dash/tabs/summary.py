@@ -44,8 +44,8 @@ def render_summary_tab(candle_dir: Path, options_dir: Path) -> None:
 
     spot = float(spx["close"].iloc[-1])
 
-    rv30 = realized_vol(spx["close"], window=30).dropna()
-    rv9 = realized_vol(spx["close"], window=9).dropna()
+    rv30 = realized_vol(spx["close"], window=30, periods_per_year=252).dropna()
+    rv9 = realized_vol(spx["close"], window=9, periods_per_year=252).dropna()
     vix_close = float(vix["close"].iloc[-1])
     vix9d_close = float(vix9d["close"].iloc[-1]) if vix9d is not None else float("nan")
 
