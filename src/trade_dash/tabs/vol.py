@@ -12,6 +12,7 @@ import streamlit as st
 from trade_dash.calc.vol import iv_rv_spread, realized_vol, vix_spx_correlation
 from trade_dash.charts.rv_acceleration import build_rv_acceleration_chart
 from trade_dash.charts.vix_term import build_vix_term_chart
+from trade_dash.charts.vol_of_vol import build_vol_of_vol_chart
 from trade_dash.charts.vol_spread import build_iv_rv_chart
 from trade_dash.data.candles import list_available_dates, load_candles
 
@@ -47,6 +48,15 @@ def render_vol_tab(candle_dir: Path) -> None:
             st.error(f"RV fast ({rv_fast_days}) must be less than slow ({rv_slow_days}).")
             return
 
+        st.divider()
+        st.caption("Vol-of-Vol")
+        vov_freq = (
+            st.selectbox("VoV Frequency", ["1min", "5min", "30min", "day"], index=0, key="vol_vov_freq")
+            or "1min"
+        )
+        vov_n = int(st.number_input("RV window N (bars)", min_value=2, value=30, key="vol_vov_n"))
+        vov_m = int(st.number_input("VoV window M (bars)", min_value=2, value=60, key="vol_vov_m"))
+
     window_days = 9 if window_choice == "9D" else 30
     iv_symbol = "VIX9D" if window_choice == "9D" else "VIX"
 
@@ -74,7 +84,7 @@ def render_vol_tab(candle_dir: Path) -> None:
             st.error(f"{iv_symbol} data not available for frequency {freq}.")
         return
 
-    rv = realized_vol(spx["close"], window=window_bars, ann_factor=ann_factor)
+    rv = realized_vol(spx["close"], window=window_bars, periods_per_year=ann_factor)
     merged = pd.merge(
         spx[["datetime"]].assign(rv=rv.values),
         iv_candles[["datetime", "close"]].rename(columns={"close": "iv"}),
@@ -94,55 +104,84 @@ def render_vol_tab(candle_dir: Path) -> None:
     spread = iv_rv_spread(merged["iv"], merged["rv"])
 
     with col_chart:
-        try:
-            vix_full = load_candles(
-                "VIX", str(freq), start=start_sel, end=end_sel, data_dir=candle_dir
-            )
-            corr = vix_spx_correlation(spx, vix_full)
-            st.metric(f"VIX-SPX Correlation ({freq})", f"{corr:.3f}")
-        except FileNotFoundError:
-            st.info(f"VIX data not available for frequency {freq}.")
+        tab_overview, tab_spx_rv = st.tabs(["Overview", "SPX RV"])
 
-        fig = build_iv_rv_chart(
-            iv=merged["iv"],
-            rv=merged["rv"],
-            spread=spread,
-            datetimes=merged["datetime"],
-            window_label=str(window_choice),
-            freq=str(freq),
-        )
-        st.plotly_chart(fig, use_container_width=True)
+        with tab_overview:
+            try:
+                vix_full = load_candles(
+                    "VIX", str(freq), start=start_sel, end=end_sel, data_dir=candle_dir
+                )
+                corr = vix_spx_correlation(spx, vix_full)
+                st.metric(f"VIX-SPX Correlation ({freq})", f"{corr:.3f}")
+            except FileNotFoundError:
+                st.info(f"VIX data not available for frequency {freq}.")
 
-        try:
-            vix = load_candles("VIX", str(freq), start=start_sel, end=end_sel, data_dir=candle_dir)
-            vix9d = load_candles(
-                "VIX9D", str(freq), start=start_sel, end=end_sel, data_dir=candle_dir
+            fig = build_iv_rv_chart(
+                iv=merged["iv"],
+                rv=merged["rv"],
+                spread=spread,
+                datetimes=merged["datetime"],
+                window_label=str(window_choice),
+                freq=str(freq),
             )
-            vix1d: pd.DataFrame | None = None
-            if str(freq) != "day":
-                with contextlib.suppress(FileNotFoundError):
-                    vix1d = load_candles(
-                        "VIX1D", str(freq), start=start_sel, end=end_sel, data_dir=candle_dir
+            st.plotly_chart(fig, use_container_width=True)
+
+            try:
+                vix = load_candles("VIX", str(freq), start=start_sel, end=end_sel, data_dir=candle_dir)
+                vix9d = load_candles(
+                    "VIX9D", str(freq), start=start_sel, end=end_sel, data_dir=candle_dir
+                )
+                vix1d: pd.DataFrame | None = None
+                if str(freq) != "day":
+                    with contextlib.suppress(FileNotFoundError):
+                        vix1d = load_candles(
+                            "VIX1D", str(freq), start=start_sel, end=end_sel, data_dir=candle_dir
+                        )
+                st.plotly_chart(
+                    build_vix_term_chart(vix, vix9d, vix1d, freq=str(freq)),
+                    use_container_width=True,
+                )
+            except FileNotFoundError as e:
+                st.info(f"VIX term structure incomplete: {e}")
+
+        with tab_spx_rv:
+            rv_fig = build_rv_acceleration_chart(
+                spx,
+                fast_days=rv_fast_days,
+                slow_days=rv_slow_days,
+                freq=str(freq),
+                title=f"SPX RV Acceleration — {rv_fast_days}d vs {rv_slow_days}d",
+            )
+            start_trim = pd.Timestamp(start_sel, tz="UTC")
+            if str(freq) in {"1min", "5min", "30min"}:
+                mask = spx["datetime"] >= start_trim
+                display_start = int(mask.idxmax()) if mask.any() else 0
+                rv_fig.update_xaxes(range=[display_start - 0.5, len(spx) - 0.5])
+            else:
+                rv_fig.update_xaxes(range=[start_trim, pd.Timestamp(end_sel, tz="UTC") + pd.Timedelta(days=1)])
+            st.plotly_chart(rv_fig, use_container_width=True)
+
+            # Vol-of-Vol chart — needs (vov_n + vov_m) bars of warmup before display start.
+            # Convert bars → calendar days with a 2x safety buffer for weekends/holidays.
+            _vov_bars_per_day = {"1min": 390, "5min": 78, "30min": 13, "day": 1}
+            vov_bars_per_day = _vov_bars_per_day.get(str(vov_freq), 1)
+            vov_lookback_days = ((vov_n + vov_m) // vov_bars_per_day + 1) * 2
+            vov_lookback_start = date.fromisoformat(str(start_sel)) - timedelta(days=vov_lookback_days)
+            try:
+                spx_vov = load_candles(
+                    "SPX", str(vov_freq), start=vov_lookback_start, end=end_sel, data_dir=candle_dir
+                )
+                if spx_vov.empty:
+                    st.warning(f"No {vov_freq} SPX data for selected range.")
+                else:
+                    vov_fig = build_vol_of_vol_chart(
+                        spx_vov,
+                        n_window=vov_n,
+                        m_window=vov_m,
+                        freq=str(vov_freq),
+                        display_start=date.fromisoformat(str(start_sel)),
+                        title=f"SPX Vol-of-Vol ({vov_freq}) — σ(N={vov_n}) · VoV(M={vov_m})",
                     )
-            st.plotly_chart(
-                build_vix_term_chart(vix, vix9d, vix1d, freq=str(freq)),
-                use_container_width=True,
-            )
-        except FileNotFoundError as e:
-            st.info(f"VIX term structure incomplete: {e}")
-
-        rv_fig = build_rv_acceleration_chart(
-            spx,
-            fast_days=rv_fast_days,
-            slow_days=rv_slow_days,
-            freq=str(freq),
-            title=f"SPX RV Acceleration — {rv_fast_days}d vs {rv_slow_days}d",
-        )
-        start_trim = pd.Timestamp(start_sel, tz="UTC")
-        if str(freq) in {"1min", "5min", "30min"}:
-            mask = spx["datetime"] >= start_trim
-            display_start = int(mask.idxmax()) if mask.any() else 0
-            rv_fig.update_xaxes(range=[display_start - 0.5, len(spx) - 0.5])
-        else:
-            rv_fig.update_xaxes(range=[start_trim, pd.Timestamp(end_sel, tz="UTC") + pd.Timedelta(days=1)])
-        st.plotly_chart(rv_fig, use_container_width=True)
+                    st.plotly_chart(vov_fig, use_container_width=True)
+            except FileNotFoundError:
+                st.info(f"{vov_freq} SPX data not available for vol-of-vol chart.")
