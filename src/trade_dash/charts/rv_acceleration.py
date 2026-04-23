@@ -1,4 +1,4 @@
-"""Realized volatility acceleration chart: fast RV vs slow RV with spread."""
+"""Realized volatility acceleration chart: log returns + fast/slow RV with spread."""
 
 from __future__ import annotations
 
@@ -29,9 +29,8 @@ def build_rv_acceleration_chart(
     freq: str = "day",
     title: str = "RV Acceleration",
 ) -> go.Figure:
-    """Two-pane chart: fast vs slow realized vol (top) + spread bar (bottom).
+    """Two-pane chart: log returns + fast/slow RV (top) + spread bar (bottom).
 
-    Windows are specified in *days*; bars are computed from freq automatically.
     Spread > 0 (fast RV > slow RV) → volatility clustering / regime unstable.
     Spread < 0 → vol decelerating / regime stabilizing.
     """
@@ -40,8 +39,8 @@ def build_rv_acceleration_chart(
     fast_window = fast_days * bars_per_day
     slow_window = slow_days * bars_per_day
 
-    fast_rv = realized_vol(candles["close"], window=fast_window, ann_factor=ann_factor)
-    slow_rv = realized_vol(candles["close"], window=slow_window, ann_factor=ann_factor)
+    fast_rv = realized_vol(candles["close"], window=fast_window, periods_per_year=ann_factor)
+    slow_rv = realized_vol(candles["close"], window=slow_window, periods_per_year=ann_factor)
     spread = fast_rv - slow_rv
 
     intraday = freq in _INTRADAY_FREQS
@@ -66,11 +65,21 @@ def build_rv_acceleration_chart(
         rows=2,
         cols=1,
         shared_xaxes=True,
+        specs=[[{"secondary_y": True}], [{"secondary_y": False}]],
         row_heights=[0.62, 0.38],
         vertical_spacing=0.04,
     )
 
-    # ── Row 1: fast RV and slow RV lines ─────────────────────────────────────
+    # ── Row 1: SPX price (left) + slow/fast RV lines (right) ────────────────
+    fig.add_trace(
+        go.Scatter(
+            x=x, y=candles["close"],
+            name="SPX Price",
+            line={"color": "rgba(255,255,255,0.55)", "width": 1},
+            text=hover_labels, hovertemplate="%{text}<br>%{y:,.2f}<extra></extra>" if hover_labels else None,
+        ),
+        row=1, col=1, secondary_y=False,
+    )
     fig.add_trace(
         go.Scatter(
             x=x, y=slow_rv,
@@ -78,7 +87,7 @@ def build_rv_acceleration_chart(
             line={"color": "cyan", "width": 1.5},
             text=hover_labels, hovertemplate=rv_hover,
         ),
-        row=1, col=1,
+        row=1, col=1, secondary_y=True,
     )
     fig.add_trace(
         go.Scatter(
@@ -87,7 +96,7 @@ def build_rv_acceleration_chart(
             line={"color": "orange", "width": 1.5},
             text=hover_labels, hovertemplate=rv_hover,
         ),
-        row=1, col=1,
+        row=1, col=1, secondary_y=True,
     )
 
     # ── Row 2: spread bars (fast − slow) ─────────────────────────────────────
@@ -116,10 +125,11 @@ def build_rv_acceleration_chart(
         title=title,
         template="plotly_dark",
         legend={"orientation": "h", "y": 1.02},
-        margin={"l": 40, "r": 20, "t": 40, "b": 40},
+        margin={"l": 40, "r": 60, "t": 40, "b": 40},
         bargap=0,
     )
-    fig.update_yaxes(title_text="RV (%)", row=1, col=1)
+    fig.update_yaxes(title_text="Price", row=1, col=1, secondary_y=False)
+    fig.update_yaxes(title_text="RV (%)", row=1, col=1, secondary_y=True)
     fig.update_yaxes(title_text="Spread (pp)", row=2, col=1)
     fig.update_xaxes(title_text="Date/Time", row=2, col=1)
 
