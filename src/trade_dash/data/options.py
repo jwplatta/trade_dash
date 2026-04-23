@@ -83,6 +83,21 @@ def find_latest_snapshots(
     return {exp: info[1] for exp, info in sorted(best.items())}
 
 
+@st.cache_data(ttl=3000)
+def find_all_snapshots_for_expiry(
+    symbol: str,
+    expiry: date,
+    data_dir: Path = OPTIONS_DIR,
+) -> list[tuple[datetime, Path]]:
+    """Return all (fetch_datetime, path) pairs for a given expiry, sorted by time."""
+    results = []
+    for path in data_dir.glob(f"{symbol}_exp{expiry}_*.csv"):
+        parsed = _parse_filename(path)
+        if parsed and parsed[0] == expiry:
+            results.append((parsed[1], path))
+    return sorted(results)
+
+
 @st.cache_data(ttl=3600)
 def load_options_snapshot(path: Path) -> pd.DataFrame:
     """Load a single options snapshot CSV with typed columns."""

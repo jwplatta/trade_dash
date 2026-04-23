@@ -13,15 +13,21 @@ from trade_dash.calc.gex import (
     net_gex_by_strike,
 )
 from trade_dash.charts.gex_aggregate import build_gex_aggregate_chart
+from trade_dash.charts.gex_heatmap import build_gex_heatmap_chart, compute_gex_history
 from trade_dash.charts.gex_single import build_gex_single_expiry_chart
 from trade_dash.charts.vol_skew import build_vol_skew_chart
-from trade_dash.data.options import find_latest_snapshots, list_expirations, load_options_snapshot
+from trade_dash.data.options import (
+    find_all_snapshots_for_expiry,
+    find_latest_snapshots,
+    list_expirations,
+    load_options_snapshot,
+)
 
 
 def render_gamma_map_tab(options_dir: Path, candle_dir: Path) -> None:
     st.subheader("Gamma Map")
 
-    @st.fragment(run_every="30s")
+    @st.fragment(run_every="5m")
     def _render() -> None:
         col_ctrl, col_chart = st.columns([1, 3])
 
@@ -78,54 +84,108 @@ def render_gamma_map_tab(options_dir: Path, candle_dir: Path) -> None:
             strike_gex, price_gex, spot, title=f"{symbol} GEX Aggregate ({days_out}d)"
         )
 
-        # Single expiry section
+        # Single expiry controls (shared across both sub-tabs)
         available_exps = list_expirations(symbol, data_dir=options_dir)
-        # Descending order; default to most recent
         available_exps_desc = sorted(available_exps, reverse=True)
 
         with col_ctrl:
             st.divider()
             selected_exp_str: str | None = None
             if available_exps_desc:
+                exp_options = [d.isoformat() for d in available_exps_desc]
+                today_iso = today.isoformat()
+                default_idx = next((i for i, s in enumerate(exp_options) if s == today_iso), 0)
                 selected_exp_str = str(
                     st.selectbox(
                         "Single expiry",
-                        options=[d.isoformat() for d in available_exps_desc],
-                        index=0,
+                        options=exp_options,
+                        index=default_idx,
                         key="gm_expiry",
                     )
                 )
 
         with col_chart:
-            st.plotly_chart(fig_agg, use_container_width=True)
+            tab_gex, tab_chains, tab_history = st.tabs(["GEX", "Chains", "GEX History"])
 
-            if selected_exp_str:
-                selected_exp = date.fromisoformat(selected_exp_str)
-                single_snapshots = find_latest_snapshots(
-                    symbol,
-                    start_date=selected_exp,
-                    days_out=0,
-                    include_0dte=True,
-                    data_dir=options_dir,
-                )
-                if single_snapshots:
-                    single_opts = load_options_snapshot(next(iter(single_snapshots.values())))
-                    fig_single = build_gex_single_expiry_chart(
-                        single_opts,
-                        spot=spot,
-                        strike_range=strike_range,
-                        title=f"{symbol} GEX {selected_exp}",
-                    )
-                    st.subheader("GEX Single Expiry")
-                    st.plotly_chart(fig_single, use_container_width=True)
+            with tab_gex:
+                st.plotly_chart(fig_agg, use_container_width=True)
 
-                    fig_skew = build_vol_skew_chart(
-                        single_opts,
-                        spot=spot,
-                        strike_range=strike_range,
-                        title=f"{symbol} Vol Skew {selected_exp}",
+            with tab_chains:
+                if selected_exp_str:
+                    selected_exp = date.fromisoformat(selected_exp_str)
+
+                    single_snapshots = find_latest_snapshots(
+                        symbol,
+                        start_date=selected_exp,
+                        days_out=0,
+                        include_0dte=True,
+                        data_dir=options_dir,
                     )
-                    st.subheader("Volatility Skew")
-                    st.plotly_chart(fig_skew, use_container_width=True)
+                    if single_snapshots:
+                        single_opts = load_options_snapshot(next(iter(single_snapshots.values())))
+                        fig_single = build_gex_single_expiry_chart(
+                            single_opts,
+                            spot=spot,
+                            strike_range=strike_range,
+                            title=f"{symbol} GEX {selected_exp}",
+                        )
+                        st.subheader("GEX Single Expiry")
+                        st.plotly_chart(fig_single, use_container_width=True)
+
+                        fig_skew = build_vol_skew_chart(
+                            single_opts,
+                            spot=spot,
+                            strike_range=strike_range,
+                            title=f"{symbol} Vol Skew {selected_exp}",
+                        )
+                        st.subheader("Volatility Skew")
+                        st.plotly_chart(fig_skew, use_container_width=True)
+
+            with tab_history:
+                if selected_exp_str:
+                    selected_exp = date.fromisoformat(selected_exp_str)
+
+                    # Cache key: recompute only when symbol/expiry/spot/range changes
+                    hist_key = (symbol, selected_exp_str, round(spot), strike_range)
+                    if st.session_state.get("_gex_hist_key") != hist_key:
+                        with st.spinner("Computing GEX history..."):
+                            all_expiry_snapshots = find_all_snapshots_for_expiry(
+                                symbol, expiry=selected_exp, data_dir=options_dir
+                            )
+                            top_strikes, timestamps, matrix = compute_gex_history(
+                                all_expiry_snapshots, spot=spot, strike_range=strike_range
+                            )
+                        st.session_state["_gex_hist_key"] = hist_key
+                        st.session_state["_gex_hist_top_strikes"] = top_strikes
+                        st.session_state["_gex_hist_timestamps"] = timestamps
+                        st.session_state["_gex_hist_matrix"] = matrix
+                    else:
+                        top_strikes = st.session_state["_gex_hist_top_strikes"]
+                        timestamps = st.session_state["_gex_hist_timestamps"]
+                        matrix = st.session_state["_gex_hist_matrix"]
+
+                    # Slider adjusts visible window — figure rebuilds instantly from stored data
+                    x_range = None
+                    if timestamps and len(timestamps) > 1:
+                        ts_min, ts_max = timestamps[0], timestamps[-1]
+                        sel_start, sel_end = st.slider(
+                            "Time range",
+                            min_value=ts_min,
+                            max_value=ts_max,
+                            value=(ts_min, ts_max),
+                            format="MM/DD HH:mm",
+                            key="gm_history_range",
+                        )
+                        x_range = (sel_start, sel_end)
+
+                    fig_heatmap = build_gex_heatmap_chart(
+                        top_strikes,
+                        timestamps,
+                        matrix,
+                        spot=spot,
+                        title=f"{symbol} GEX History {selected_exp}",
+                        x_range=x_range,
+                    )
+                    st.plotly_chart(fig_heatmap, use_container_width=True)
 
     _render()
