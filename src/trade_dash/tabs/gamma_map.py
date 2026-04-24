@@ -8,10 +8,12 @@ from pathlib import Path
 import pandas as pd
 import streamlit as st
 
+from trade_dash.calc.flow import compute_intraday_flow
 from trade_dash.calc.gex import (
     net_gex_by_price,
     net_gex_by_strike,
 )
+from trade_dash.charts.flow_heatmap import build_flow_heatmap_chart
 from trade_dash.charts.gex_aggregate import build_gex_aggregate_chart
 from trade_dash.charts.gex_heatmap import build_gex_heatmap_chart, compute_gex_history
 from trade_dash.charts.gex_single import build_gex_single_expiry_chart
@@ -105,7 +107,9 @@ def render_gamma_map_tab(options_dir: Path, candle_dir: Path) -> None:
                 )
 
         with col_chart:
-            tab_gex, tab_chains, tab_history = st.tabs(["GEX", "Chains", "GEX History"])
+            tab_gex, tab_chains, tab_history, tab_intraday = st.tabs(
+                ["GEX", "Chains", "GEX History", "Intraday"]
+            )
 
             with tab_gex:
                 st.plotly_chart(fig_agg, use_container_width=True)
@@ -187,5 +191,73 @@ def render_gamma_map_tab(options_dir: Path, candle_dir: Path) -> None:
                         x_range=x_range,
                     )
                     st.plotly_chart(fig_heatmap, use_container_width=True)
+
+            with tab_intraday:
+                if selected_exp_str:
+                    selected_exp = date.fromisoformat(selected_exp_str)
+
+                    col_ct, col_wt = st.columns([3, 1])
+                    with col_ct:
+                        ct_filter = str(
+                            st.radio(
+                                "Contract type",
+                                options=["ALL", "CALL", "PUT"],
+                                horizontal=True,
+                                key="gm_intraday_ct",
+                            )
+                        )
+                    with col_wt:
+                        weight_by_delta = st.toggle(
+                            "Weight by delta",
+                            value=True,
+                            key="gm_intraday_weight_delta"
+                        )
+                    bucket_minutes = int(
+                        st.select_slider(
+                            "Sample interval (minutes)",
+                            options=[1, 5, 10, 15, 20, 25, 30],
+                            value=5,
+                            key="gm_intraday_bucket",
+                        )
+                    )
+
+                    flow_key = (
+                        symbol, selected_exp_str, round(spot),
+                        strike_range, ct_filter, bucket_minutes, weight_by_delta,
+                    )
+                    with st.spinner("Computing intraday flow..."):
+                        if st.session_state.get("_flow_key") != flow_key:
+                            all_expiry_snapshots = find_all_snapshots_for_expiry(
+                                symbol, expiry=selected_exp, data_dir=options_dir
+                            )
+                            flow_strikes, flow_timestamps, flow_matrix, flow_prices = (
+                                compute_intraday_flow(
+                                    all_expiry_snapshots,
+                                    spot=spot,
+                                    moneyness_pct=range_pct / 100,
+                                    contract_filter=ct_filter,
+                                    bucket_minutes=bucket_minutes,
+                                    weight_by_delta=weight_by_delta,
+                                )
+                            )
+                            st.session_state["_flow_key"] = flow_key
+                            st.session_state["_flow_strikes"] = flow_strikes
+                            st.session_state["_flow_timestamps"] = flow_timestamps
+                            st.session_state["_flow_matrix"] = flow_matrix
+                            st.session_state["_flow_prices"] = flow_prices
+                        else:
+                            flow_strikes = st.session_state["_flow_strikes"]
+                            flow_timestamps = st.session_state["_flow_timestamps"]
+                            flow_matrix = st.session_state["_flow_matrix"]
+                            flow_prices = st.session_state["_flow_prices"]
+
+                        fig_flow = build_flow_heatmap_chart(
+                            flow_strikes,
+                            flow_timestamps,
+                            flow_matrix,
+                            prices=flow_prices,
+                            title=f"{symbol} Intraday Flow {selected_exp}",
+                        )
+                    st.plotly_chart(fig_flow, use_container_width=True)
 
     _render()

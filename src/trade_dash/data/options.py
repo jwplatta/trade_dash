@@ -23,6 +23,7 @@ _OPTIONS_DTYPES: dict[str, Any] = {
     "mark": "float64",
     "bid": "float64",
     "ask": "float64",
+    "total_volume": "float64",
 }
 
 
