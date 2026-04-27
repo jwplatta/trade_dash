@@ -13,10 +13,12 @@ from trade_dash.calc.gex import (
     net_gex_by_price,
     net_gex_by_strike,
 )
+from trade_dash.calc.spread import compute_intraday_spread
 from trade_dash.charts.flow_heatmap import build_flow_heatmap_chart
 from trade_dash.charts.gex_aggregate import build_gex_aggregate_chart
 from trade_dash.charts.gex_heatmap import build_gex_heatmap_chart, compute_gex_history
 from trade_dash.charts.gex_single import build_gex_single_expiry_chart
+from trade_dash.charts.spread_heatmap import build_spread_heatmap_chart
 from trade_dash.charts.vol_skew import build_vol_skew_chart
 from trade_dash.data.options import (
     find_all_snapshots_for_expiry,
@@ -208,15 +210,13 @@ def render_gamma_map_tab(options_dir: Path, candle_dir: Path) -> None:
                         )
                     with col_date:
                         intraday_date = st.date_input(
-                            "Date",
+                            "Sample date",
                             value=date.today(),
                             key="gm_intraday_date",
                         )
                     with col_wt:
                         weight_by_delta = st.toggle(
-                            "Weight by delta",
-                            value=True,
-                            key="gm_intraday_weight_delta"
+                            "Weight by delta", value=True, key="gm_intraday_weight_delta"
                         )
                     bucket_minutes = int(
                         st.select_slider(
@@ -231,9 +231,15 @@ def render_gamma_map_tab(options_dir: Path, candle_dir: Path) -> None:
                         symbol, expiry=selected_exp, data_dir=options_dir
                     )
                     flow_key = (
-                        symbol, selected_exp_str, round(spot),
-                        strike_range, ct_filter, bucket_minutes, weight_by_delta,
-                        intraday_date, len(all_expiry_snapshots),
+                        symbol,
+                        selected_exp_str,
+                        round(spot),
+                        strike_range,
+                        ct_filter,
+                        bucket_minutes,
+                        weight_by_delta,
+                        intraday_date,
+                        len(all_expiry_snapshots),
                     )
                     with st.spinner("Computing intraday flow..."):
                         if st.session_state.get("_flow_key") != flow_key:
@@ -267,5 +273,73 @@ def render_gamma_map_tab(options_dir: Path, candle_dir: Path) -> None:
                             title=f"{symbol} Intraday Flow {selected_exp}",
                         )
                     st.plotly_chart(fig_flow, use_container_width=True)
+
+                    st.divider()
+                    col_sct, col_sdate, _ = st.columns([2, 2, 2])
+                    with col_sct:
+                        spread_ct = str(
+                            st.radio(
+                                "Contract type",
+                                options=["CALL", "PUT"],
+                                horizontal=True,
+                                key="gm_spread_ct",
+                            )
+                        )
+                    with col_sdate:
+                        spread_date = st.date_input(
+                            "Sample Date",
+                            value=date.today(),
+                            key="gm_spread_date",
+                        )
+                    spread_bucket_minutes = int(
+                        st.select_slider(
+                            "Sample interval (minutes)",
+                            options=[1, 5, 10, 15, 20, 25, 30],
+                            value=5,
+                            key="gm_spread_bucket",
+                        )
+                    )
+
+                    spread_key = (
+                        symbol,
+                        selected_exp_str,
+                        round(spot),
+                        strike_range,
+                        spread_ct,
+                        spread_bucket_minutes,
+                        spread_date,
+                        len(all_expiry_snapshots),
+                    )
+                    with st.spinner("Computing spread heatmap..."):
+                        if st.session_state.get("_spread_key") != spread_key:
+                            spread_strikes, spread_ts, spread_matrix, spread_prices = (
+                                compute_intraday_spread(
+                                    all_expiry_snapshots,
+                                    spot=spot,
+                                    moneyness_pct=range_pct / 100,
+                                    contract_filter=spread_ct,
+                                    bucket_minutes=spread_bucket_minutes,
+                                    target_date=spread_date,
+                                )
+                            )
+                            st.session_state["_spread_key"] = spread_key
+                            st.session_state["_spread_strikes"] = spread_strikes
+                            st.session_state["_spread_ts"] = spread_ts
+                            st.session_state["_spread_matrix"] = spread_matrix
+                            st.session_state["_spread_prices"] = spread_prices
+                        else:
+                            spread_strikes = st.session_state["_spread_strikes"]
+                            spread_ts = st.session_state["_spread_ts"]
+                            spread_matrix = st.session_state["_spread_matrix"]
+                            spread_prices = st.session_state["_spread_prices"]
+
+                        fig_spread = build_spread_heatmap_chart(
+                            spread_strikes,
+                            spread_ts,
+                            spread_matrix,
+                            prices=spread_prices,
+                            title=f"{symbol} Bid-Ask Spread Z {selected_exp} ({spread_ct})",
+                        )
+                    st.plotly_chart(fig_spread, use_container_width=True)
 
     _render()
