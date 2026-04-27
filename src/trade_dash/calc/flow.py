@@ -20,6 +20,7 @@ def compute_intraday_flow(
     contract_filter: str = "ALL",
     bucket_minutes: int = 5,
     weight_by_delta: bool = True,
+    target_date: date | None = None,
 ) -> tuple[list[float], list[datetime], list[list[float]], list[float]]:
     """Compute intraday flow matrix for a heatmap.
 
@@ -31,14 +32,15 @@ def compute_intraday_flow(
 
     Returns (strikes, timestamps, matrix, prices) where matrix[i][j] is the
     flow value for strikes[i] at timestamps[j], and prices[j] is the
-    underlying_price at timestamps[j]. Only today's snapshots are included.
+    underlying_price at timestamps[j]. Only snapshots matching `target_date`
+    (defaults to today) are included.
     """
     if not snapshots:
         return [], [], [], []
 
-    today = date.today()
+    today = target_date if target_date is not None else date.today()
 
-    # Filter to today and downsample to one snapshot per 5-minute bucket
+    # Filter to target date and downsample to one snapshot per bucket
     today_snapshots = sorted(
         ((ts, path) for ts, path in snapshots if ts.date() == today),
         key=lambda x: x[0],

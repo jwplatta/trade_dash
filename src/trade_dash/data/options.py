@@ -84,7 +84,7 @@ def find_latest_snapshots(
     return {exp: info[1] for exp, info in sorted(best.items())}
 
 
-@st.cache_data(ttl=3000)
+@st.cache_data(ttl=30)
 def find_all_snapshots_for_expiry(
     symbol: str,
     expiry: date,

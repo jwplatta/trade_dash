@@ -196,7 +196,7 @@ def render_gamma_map_tab(options_dir: Path, candle_dir: Path) -> None:
                 if selected_exp_str:
                     selected_exp = date.fromisoformat(selected_exp_str)
 
-                    col_ct, col_wt = st.columns([3, 1])
+                    col_ct, col_date, col_wt = st.columns([3, 2, 1])
                     with col_ct:
                         ct_filter = str(
                             st.radio(
@@ -205,6 +205,12 @@ def render_gamma_map_tab(options_dir: Path, candle_dir: Path) -> None:
                                 horizontal=True,
                                 key="gm_intraday_ct",
                             )
+                        )
+                    with col_date:
+                        intraday_date = st.date_input(
+                            "Date",
+                            value=date.today(),
+                            key="gm_intraday_date",
                         )
                     with col_wt:
                         weight_by_delta = st.toggle(
@@ -221,15 +227,16 @@ def render_gamma_map_tab(options_dir: Path, candle_dir: Path) -> None:
                         )
                     )
 
+                    all_expiry_snapshots = find_all_snapshots_for_expiry(
+                        symbol, expiry=selected_exp, data_dir=options_dir
+                    )
                     flow_key = (
                         symbol, selected_exp_str, round(spot),
                         strike_range, ct_filter, bucket_minutes, weight_by_delta,
+                        intraday_date, len(all_expiry_snapshots),
                     )
                     with st.spinner("Computing intraday flow..."):
                         if st.session_state.get("_flow_key") != flow_key:
-                            all_expiry_snapshots = find_all_snapshots_for_expiry(
-                                symbol, expiry=selected_exp, data_dir=options_dir
-                            )
                             flow_strikes, flow_timestamps, flow_matrix, flow_prices = (
                                 compute_intraday_flow(
                                     all_expiry_snapshots,
@@ -238,6 +245,7 @@ def render_gamma_map_tab(options_dir: Path, candle_dir: Path) -> None:
                                     contract_filter=ct_filter,
                                     bucket_minutes=bucket_minutes,
                                     weight_by_delta=weight_by_delta,
+                                    target_date=intraday_date,
                                 )
                             )
                             st.session_state["_flow_key"] = flow_key
