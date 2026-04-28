@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from datetime import date
+from datetime import date, timedelta
 from pathlib import Path
 
 import pandas as pd
@@ -13,11 +13,13 @@ from trade_dash.calc.gex import (
     net_gex_by_price,
     net_gex_by_strike,
 )
+from trade_dash.calc.gex_term_structure import compute_gex_term_structure
 from trade_dash.calc.spread import compute_intraday_spread
 from trade_dash.charts.flow_heatmap import build_flow_heatmap_chart
 from trade_dash.charts.gex_aggregate import build_gex_aggregate_chart
 from trade_dash.charts.gex_heatmap import build_gex_heatmap_chart, compute_gex_history
 from trade_dash.charts.gex_single import build_gex_single_expiry_chart
+from trade_dash.charts.gex_term_structure import build_gex_term_structure_chart
 from trade_dash.charts.spread_heatmap import build_spread_heatmap_chart
 from trade_dash.charts.vol_skew import build_vol_skew_chart
 from trade_dash.data.options import (
@@ -109,8 +111,8 @@ def render_gamma_map_tab(options_dir: Path, candle_dir: Path) -> None:
                 )
 
         with col_chart:
-            tab_gex, tab_chains, tab_history, tab_intraday = st.tabs(
-                ["GEX", "Chains", "Chain GEX History", "Intraday"]
+            tab_gex, tab_chains, tab_history, tab_intraday, tab_gamma_heatmap = st.tabs(
+                ["GEX", "Chains", "Chain GEX History", "Intraday", "Gamma Heatmap"]
             )
 
             with tab_gex:
@@ -341,5 +343,71 @@ def render_gamma_map_tab(options_dir: Path, candle_dir: Path) -> None:
                             title=f"{symbol} Bid-Ask Spread Z {selected_exp} ({spread_ct})",
                         )
                     st.plotly_chart(fig_spread, use_container_width=True)
+
+            with tab_gamma_heatmap:
+                gh_date_range = st.date_input(
+                    "Expiration date range",
+                    value=(today, today + timedelta(days=10)),
+                    key="gm_gh_dates",
+                )
+                gh_normalize = st.toggle(
+                    "Relative GEX (per-expiry normalized)",
+                    value=False,
+                    key="gm_gh_normalize",
+                )
+
+                if isinstance(gh_date_range, tuple) and len(gh_date_range) == 2:
+                    gh_start, gh_end = gh_date_range[0], gh_date_range[1]
+                else:
+                    gh_start, gh_end = today, today + timedelta(days=10)
+
+                gh_snapshots = find_latest_snapshots(
+                    symbol,
+                    start_date=gh_start,
+                    days_out=(gh_end - gh_start).days,
+                    include_0dte=include_0dte,
+                    data_dir=options_dir,
+                )
+
+                if not gh_snapshots:
+                    st.warning(f"No {symbol} snapshots found for selected date range.")
+                else:
+                    gh_key = (
+                        symbol, round(spot), strike_range, gh_start, gh_end, len(gh_snapshots)
+                    )
+                    with st.spinner("Computing GEX term structure..."):
+                        if st.session_state.get("_gh_key") != gh_key:
+                            gh_strikes, gh_expirations, gh_matrix = compute_gex_term_structure(
+                                gh_snapshots, spot=spot, strike_range=strike_range
+                            )
+                            st.session_state["_gh_key"] = gh_key
+                            st.session_state["_gh_strikes"] = gh_strikes
+                            st.session_state["_gh_expirations"] = gh_expirations
+                            st.session_state["_gh_matrix"] = gh_matrix
+                        else:
+                            gh_strikes = st.session_state["_gh_strikes"]
+                            gh_expirations = st.session_state["_gh_expirations"]
+                            gh_matrix = st.session_state["_gh_matrix"]
+
+                    gh_y_range: tuple[float, float] | None = None
+                    if gh_strikes and len(gh_strikes) >= 2:
+                        gh_strike_range = st.select_slider(
+                            "Strike range",
+                            options=gh_strikes,
+                            value=(gh_strikes[0], gh_strikes[-1]),
+                            key="gm_gh_strike_range",
+                        )
+                        gh_y_range = (float(gh_strike_range[0]), float(gh_strike_range[1]))
+
+                    fig_gh = build_gex_term_structure_chart(
+                        gh_strikes,
+                        gh_expirations,
+                        gh_matrix,
+                        spot=spot,
+                        normalize=gh_normalize,
+                        y_range=gh_y_range,
+                        title=f"{symbol} GEX Term Structure",
+                    )
+                    st.plotly_chart(fig_gh, use_container_width=True)
 
     _render()
