@@ -110,7 +110,7 @@ def render_gamma_map_tab(options_dir: Path, candle_dir: Path) -> None:
 
         with col_chart:
             tab_gex, tab_chains, tab_history, tab_intraday = st.tabs(
-                ["GEX", "Chains", "GEX History", "Intraday"]
+                ["GEX", "Chains", "Chain GEX History", "Intraday"]
             )
 
             with tab_gex:
