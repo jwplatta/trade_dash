@@ -1,0 +1,13 @@
+services:
+  options-monitor:
+    build: .
+    ports:
+      - "8501:8501"
+    volumes:
+      - /Users/jplatta/.tickrake:/Users/jplatta/.tickrake:ro
+    environment:
+      options_monitor_TICKRAKE_DB_PATH: /Users/jplatta/.tickrake/tickrake.sqlite3
+      options_monitor_CANDLE_DIR: /Users/jplatta/.tickrake/data/history/ibkr-paper
+      options_monitor_SCHWAB_CANDLE_DIR: /Users/jplatta/.tickrake/data/history/schwab
+      options_monitor_OPTIONS_DIR: /Users/jplatta/.tickrake/data/options/schwab
+      options_monitor_PARQUET_OPTIONS_DIR: /Users/jplatta/.tickrake/data/options/schwab
