@@ -11,9 +11,7 @@ def sma(series: pd.Series, window: int) -> pd.Series:
     return result
 
 
-def _vwap_for_groups(
-    candles: pd.DataFrame, groups: pd.Series
-) -> tuple[pd.Series, pd.Series]:
+def _vwap_for_groups(candles: pd.DataFrame, groups: pd.Series) -> tuple[pd.Series, pd.Series]:
     """VWAP and volume-weighted std dev for the given grouping key.
 
     Uses E[X²] − E[X]² identity; single groupby pass over three columns at once.
@@ -21,9 +19,11 @@ def _vwap_for_groups(
     """
     tp = (candles["high"] + candles["low"] + candles["close"]) / 3
     vol = candles["volume"]
-    agg = pd.DataFrame(
-        {"vol": vol, "tp_vol": tp * vol, "tp2_vol": tp**2 * vol}
-    ).groupby(groups).cumsum()
+    agg = (
+        pd.DataFrame({"vol": vol, "tp_vol": tp * vol, "tp2_vol": tp**2 * vol})
+        .groupby(groups)
+        .cumsum()
+    )
     v = agg["tp_vol"] / agg["vol"]
     std = (agg["tp2_vol"] / agg["vol"] - v**2).clip(lower=0).pow(0.5)
     return v.reset_index(drop=True), std.reset_index(drop=True)

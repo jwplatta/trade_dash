@@ -28,7 +28,16 @@ _DTE_EDGES: list[int] = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 14, 21, 30, 45, 60, 9
 #    0.03  –  0.05: OTM 3–5%
 #   > 0.05        : OTM >5%
 _MONEYNESS_EDGES: list[float] = [
-    -float("inf"), -0.05, -0.03, -0.01, -0.005, 0.005, 0.01, 0.03, 0.05, float("inf")
+    -float("inf"),
+    -0.05,
+    -0.03,
+    -0.01,
+    -0.005,
+    0.005,
+    0.01,
+    0.03,
+    0.05,
+    float("inf"),
 ]
 
 _CHICAGO = ZoneInfo("America/Chicago")
@@ -93,7 +102,7 @@ def build_oi_bucket_stats(
         row["dte_bucket"] = pd.cut(
             row["dte"],
             bins=dte_edges,
-            labels=[f"{dte_edges[i]}-{dte_edges[i+1]}d" for i in range(len(dte_edges) - 1)],
+            labels=[f"{dte_edges[i]}-{dte_edges[i + 1]}d" for i in range(len(dte_edges) - 1)],
             right=True,
             include_lowest=True,
         )
@@ -101,7 +110,7 @@ def build_oi_bucket_stats(
             row["log_moneyness"],
             bins=moneyness_edges,
             labels=[
-                f"{moneyness_edges[i]:.2f}/{moneyness_edges[i+1]:.2f}"
+                f"{moneyness_edges[i]:.2f}/{moneyness_edges[i + 1]:.2f}"
                 for i in range(len(moneyness_edges) - 1)
             ],
             right=True,
@@ -188,13 +197,19 @@ def compute_oi_zscore_matrix(
             log_m = math.log(strike / spot)
 
             dte_bin = pd.cut(
-                [dte], bins=dte_edges, right=True, include_lowest=True,
-                labels=[f"{dte_edges[i]}-{dte_edges[i+1]}d" for i in range(len(dte_edges) - 1)],
+                [dte],
+                bins=dte_edges,
+                right=True,
+                include_lowest=True,
+                labels=[f"{dte_edges[i]}-{dte_edges[i + 1]}d" for i in range(len(dte_edges) - 1)],
             )[0]
             m_bin = pd.cut(
-                [log_m], bins=moneyness_edges, right=True, include_lowest=True,
+                [log_m],
+                bins=moneyness_edges,
+                right=True,
+                include_lowest=True,
                 labels=[
-                    f"{moneyness_edges[i]:.2f}/{moneyness_edges[i+1]:.2f}"
+                    f"{moneyness_edges[i]:.2f}/{moneyness_edges[i + 1]:.2f}"
                     for i in range(len(moneyness_edges) - 1)
                 ],
             )[0]
@@ -219,7 +234,5 @@ def compute_oi_zscore_matrix(
         return pd.DataFrame()
 
     df_z = pd.DataFrame(rows)
-    matrix = df_z.pivot_table(
-        index="expiration_date", columns="strike", values="z", aggfunc="mean"
-    )
+    matrix = df_z.pivot_table(index="expiration_date", columns="strike", values="z", aggfunc="mean")
     return matrix.sort_index().sort_index(axis=1)

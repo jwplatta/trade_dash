@@ -8,6 +8,7 @@ from typing import Any
 from zoneinfo import ZoneInfo
 
 import pandas as pd
+
 from options_monitor.data.options import load_options_snapshot
 
 _CHICAGO = ZoneInfo("America/Chicago")

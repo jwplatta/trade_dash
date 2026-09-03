@@ -7,6 +7,7 @@ from datetime import UTC, date, datetime
 from pathlib import Path
 
 import pytest
+
 from options_monitor.calc.maker_taker import compute_maker_taker_flow
 
 # ---------------------------------------------------------------------------

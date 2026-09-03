@@ -6,6 +6,7 @@ from datetime import date, datetime
 
 import pandas as pd
 import pytest
+
 from options_monitor.data.candles import list_available_dates, load_candles
 
 

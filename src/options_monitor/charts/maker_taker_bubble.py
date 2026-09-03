@@ -44,8 +44,7 @@ def build_maker_taker_bubble_chart(
     abs_flows = [abs(f) for f in weighted_flows]
     max_flow = max(abs_flows) if abs_flows else 1.0
     marker_sizes = [
-        _MIN_BUBBLE_PX + (a / max_flow) * (_MAX_BUBBLE_PX - _MIN_BUBBLE_PX)
-        for a in abs_flows
+        _MIN_BUBBLE_PX + (a / max_flow) * (_MAX_BUBBLE_PX - _MIN_BUBBLE_PX) for a in abs_flows
     ]
 
     fig.add_trace(
@@ -62,9 +61,7 @@ def build_maker_taker_bubble_chart(
                 line=dict(width=0),
             ),
             hovertemplate=(
-                "Time: %{x}<br>"
-                "Strike: %{y}<br>"
-                "Flow: %{marker.color:.1f}<extra></extra>"
+                "Time: %{x}<br>Strike: %{y}<br>Flow: %{marker.color:.1f}<extra></extra>"
             ),
             name="Flow",
         )

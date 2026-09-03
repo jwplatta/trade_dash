@@ -56,7 +56,9 @@ def build_vol_of_vol_chart(
     if display_start is not None:
         dt = candles["datetime"]
         tz = dt.dt.tz
-        start_ts = pd.Timestamp(display_start, tz=tz) if tz is not None else pd.Timestamp(display_start)
+        start_ts = (
+            pd.Timestamp(display_start, tz=tz) if tz is not None else pd.Timestamp(display_start)
+        )
         mask = dt >= start_ts
         candles = candles[mask].reset_index(drop=True)
         delta_sigma = delta_sigma[mask].reset_index(drop=True)
@@ -86,7 +88,8 @@ def build_vol_of_vol_chart(
         htpl = "%{y:.5f}<extra></extra>"
 
     fig = make_subplots(
-        rows=2, cols=1,
+        rows=2,
+        cols=1,
         shared_xaxes=True,
         row_heights=[0.50, 0.50],
         vertical_spacing=0.04,
@@ -94,26 +97,46 @@ def build_vol_of_vol_chart(
 
     # ── Row 1: VoV ────────────────────────────────────────────────────────────
     fig.add_trace(
-        go.Scatter(x=x, y=vov, name=f"VoV (M={m_window})",
-                   line={"color": "orange", "width": 1.5},
-                   text=hover, hovertemplate=htpl),
-        row=1, col=1,
+        go.Scatter(
+            x=x,
+            y=vov,
+            name=f"VoV (M={m_window})",
+            line={"color": "orange", "width": 1.5},
+            text=hover,
+            hovertemplate=htpl,
+        ),
+        row=1,
+        col=1,
     )
 
     # ── Row 2: Δσ filled areas ────────────────────────────────────────────────
     fig.add_trace(
-        go.Scatter(x=x, y=pos_delta, name="Δσ ↑ (vol rising)",
-                   fill="tozeroy", line={"width": 0},
-                   fillcolor="rgba(220, 60, 60, 0.55)",
-                   text=hover, hovertemplate=htpl),
-        row=2, col=1,
+        go.Scatter(
+            x=x,
+            y=pos_delta,
+            name="Δσ ↑ (vol rising)",
+            fill="tozeroy",
+            line={"width": 0},
+            fillcolor="rgba(220, 60, 60, 0.55)",
+            text=hover,
+            hovertemplate=htpl,
+        ),
+        row=2,
+        col=1,
     )
     fig.add_trace(
-        go.Scatter(x=x, y=neg_delta, name="Δσ ↓ (vol falling)",
-                   fill="tozeroy", line={"width": 0},
-                   fillcolor="rgba(40, 180, 120, 0.55)",
-                   text=hover, hovertemplate=htpl),
-        row=2, col=1,
+        go.Scatter(
+            x=x,
+            y=neg_delta,
+            name="Δσ ↓ (vol falling)",
+            fill="tozeroy",
+            line={"width": 0},
+            fillcolor="rgba(40, 180, 120, 0.55)",
+            text=hover,
+            hovertemplate=htpl,
+        ),
+        row=2,
+        col=1,
     )
 
     fig.update_layout(
