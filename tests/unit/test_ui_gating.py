@@ -6,6 +6,7 @@ from pathlib import Path
 
 import pandas as pd
 import pytest
+
 from options_monitor import app
 from options_monitor.tabs import gex as gamma_map
 from options_monitor.tabs import history

@@ -4,11 +4,12 @@ from __future__ import annotations
 
 import pandas as pd
 import plotly.graph_objects as go
+from plotly.subplots import make_subplots
+
 from options_monitor.calc.ma import sma, validate_windows
 from options_monitor.charts._chart_utils import daily_ticks as _daily_ticks
 from options_monitor.charts._chart_utils import intraday_ticks as _intraday_ticks
 from options_monitor.charts._chart_utils import to_ct as _to_ct
-from plotly.subplots import make_subplots
 
 _INTRADAY_FREQS = {"1min", "5min", "30min"}
 

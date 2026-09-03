@@ -6,6 +6,7 @@ from datetime import datetime
 
 import plotly.graph_objects as go
 import pytest
+
 from options_monitor.charts.maker_taker_bubble import build_maker_taker_bubble_chart
 
 

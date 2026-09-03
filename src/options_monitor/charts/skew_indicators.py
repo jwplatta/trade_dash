@@ -3,8 +3,9 @@
 from __future__ import annotations
 
 import plotly.graph_objects as go
-from options_monitor.calc.vol import RiskReversalResult
 from plotly.subplots import make_subplots
+
+from options_monitor.calc.vol import RiskReversalResult
 
 _GREEN = "#00c46a"
 _RED = "#ef5350"

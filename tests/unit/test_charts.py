@@ -8,6 +8,7 @@ import numpy as np
 import pandas as pd
 import plotly.graph_objects as go
 import pytest
+
 from options_monitor.charts.gex_aggregate import build_gex_aggregate_chart
 from options_monitor.charts.gex_single import build_gex_single_expiry_chart
 from options_monitor.charts.price import build_sma_price_chart

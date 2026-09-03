@@ -44,39 +44,55 @@ def build_flow_tape_chart(
     # --- Row 1: New Flow cumsum lines ---
     fig.add_trace(
         go.Scatter(
-            x=timestamps, y=new_call, mode="lines", name="Call Flow",
+            x=timestamps,
+            y=new_call,
+            mode="lines",
+            name="Call Flow",
             line={"color": _GREEN, "width": 1.5},
             hovertemplate="Time: %{x|%H:%M}<br>%{y:.1f}<extra>Call New Flow</extra>",
         ),
-        row=1, col=1,
+        row=1,
+        col=1,
     )
     fig.add_trace(
         go.Scatter(
-            x=timestamps, y=new_put, mode="lines", name="Put Flow",
+            x=timestamps,
+            y=new_put,
+            mode="lines",
+            name="Put Flow",
             line={"color": _RED, "width": 1.5},
             hovertemplate="Time: %{x|%H:%M}<br>%{y:.1f}<extra>Put New Flow</extra>",
         ),
-        row=1, col=1,
+        row=1,
+        col=1,
     )
     fig.add_hline(y=0, line={"color": "gray", "width": 1, "dash": "dot"}, row=1, col=1)
     # --- Row 2: Cumulative Flow lines ---
     fig.add_trace(
         go.Scatter(
-            x=timestamps, y=cum_call, mode="lines", name="Call Cum",
+            x=timestamps,
+            y=cum_call,
+            mode="lines",
+            name="Call Cum",
             line={"color": _GREEN, "width": 1.5},
             showlegend=False,
             hovertemplate="Time: %{x|%H:%M}<br>%{y:.1f}<extra>Call Cum Flow</extra>",
         ),
-        row=2, col=1,
+        row=2,
+        col=1,
     )
     fig.add_trace(
         go.Scatter(
-            x=timestamps, y=cum_put, mode="lines", name="Put Cum",
+            x=timestamps,
+            y=cum_put,
+            mode="lines",
+            name="Put Cum",
             line={"color": _RED, "width": 1.5},
             showlegend=False,
             hovertemplate="Time: %{x|%H:%M}<br>%{y:.1f}<extra>Put Cum Flow</extra>",
         ),
-        row=2, col=1,
+        row=2,
+        col=1,
     )
     fig.add_hline(y=0, line={"color": "gray", "width": 1, "dash": "dot"}, row=2, col=1)
     # --- Row 3: Oscillator bars (raw per-snapshot New Flow) ---
@@ -85,35 +101,47 @@ def build_flow_tape_chart(
 
     fig.add_trace(
         go.Bar(
-            x=timestamps, y=rc.clip(lower=0).tolist(), name="Call Buy",
+            x=timestamps,
+            y=rc.clip(lower=0).tolist(),
+            name="Call Buy",
             marker_color=_GREEN,
             hovertemplate="Time: %{x|%H:%M}<br>%{y:.1f}<extra>Call Buy</extra>",
         ),
-        row=3, col=1,
+        row=3,
+        col=1,
     )
     fig.add_trace(
         go.Bar(
-            x=timestamps, y=rc.clip(upper=0).tolist(), name="Call Sell",
+            x=timestamps,
+            y=rc.clip(upper=0).tolist(),
+            name="Call Sell",
             marker_color=_GREEN_DARK,
             hovertemplate="Time: %{x|%H:%M}<br>%{y:.1f}<extra>Call Sell</extra>",
         ),
-        row=3, col=1,
+        row=3,
+        col=1,
     )
     fig.add_trace(
         go.Bar(
-            x=timestamps, y=rp.clip(lower=0).tolist(), name="Put Buy",
+            x=timestamps,
+            y=rp.clip(lower=0).tolist(),
+            name="Put Buy",
             marker_color=_RED,
             hovertemplate="Time: %{x|%H:%M}<br>%{y:.1f}<extra>Put Buy</extra>",
         ),
-        row=3, col=1,
+        row=3,
+        col=1,
     )
     fig.add_trace(
         go.Bar(
-            x=timestamps, y=rp.clip(upper=0).tolist(), name="Put Sell",
+            x=timestamps,
+            y=rp.clip(upper=0).tolist(),
+            name="Put Sell",
             marker_color=_RED_DARK,
             hovertemplate="Time: %{x|%H:%M}<br>%{y:.1f}<extra>Put Sell</extra>",
         ),
-        row=3, col=1,
+        row=3,
+        col=1,
     )
     fig.add_hline(y=0, line={"color": "gray", "width": 1, "dash": "dot"}, row=3, col=1)
     fig.update_layout(

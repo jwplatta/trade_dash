@@ -52,16 +52,10 @@ def _aggregate_side_gex_by_strike(
         return empty, empty
 
     if weight_by_distance:
-        anchor = (
-            anchor_date.date()
-            if isinstance(anchor_date, pd.Timestamp)
-            else anchor_date
-        )
+        anchor = anchor_date.date() if isinstance(anchor_date, pd.Timestamp) else anchor_date
         if anchor is not None and df["expiration_date"].notna().any():
-            dte = (
-                pd.to_datetime(df["expiration_date"], errors="coerce").dt.date.map(
-                    lambda exp: max((exp - anchor).days, 1) if pd.notna(exp) else 1
-                )
+            dte = pd.to_datetime(df["expiration_date"], errors="coerce").dt.date.map(
+                lambda exp: max((exp - anchor).days, 1) if pd.notna(exp) else 1
             )
             df["weighted_gex"] = df["gex"] / dte.astype(float)
         else:
@@ -227,10 +221,10 @@ def find_raw_wall_strikes(
     """Return SpotGamma-style call and put wall strikes.
 
     The call wall is the OTM strike with the highest raw net call GEX
-    (largest gamma × open_interest concentration above spot).
+    (largest gamma x open_interest concentration above spot).
     The put wall is the OTM strike with the most negative raw net put GEX
-    (largest gamma × open_interest concentration below spot).
-    No DTE weighting, no proximity bias — just peak open interest × gamma.
+    (largest gamma x open_interest concentration below spot).
+    No DTE weighting, no proximity bias — just peak open interest x gamma.
     """
     calls, puts = _aggregate_side_gex_by_strike(
         opts,
@@ -245,12 +239,10 @@ def find_raw_wall_strikes(
     call_source = otm_calls if not otm_calls.empty else calls
     put_source = otm_puts if not otm_puts.empty else puts
 
-    call_wall = None if call_source.empty else float(
-        call_source.loc[call_source["gex"].idxmax(), "K"]
+    call_wall = (
+        None if call_source.empty else float(call_source.loc[call_source["gex"].idxmax(), "K"])
     )
-    put_wall = None if put_source.empty else float(
-        put_source.loc[put_source["gex"].idxmin(), "K"]
-    )
+    put_wall = None if put_source.empty else float(put_source.loc[put_source["gex"].idxmin(), "K"])
     return call_wall, put_wall
 
 
@@ -277,16 +269,18 @@ def find_aggregate_wall_strikes(
             None
             if calls.empty
             else float(
-                calls.sort_values(["count", "abs_gex", "K"], ascending=[False, False, True])
-                .iloc[0]["K"]
+                calls.sort_values(["count", "abs_gex", "K"], ascending=[False, False, True]).iloc[
+                    0
+                ]["K"]
             )
         )
         put_wall = (
             None
             if puts.empty
             else float(
-                puts.sort_values(["count", "abs_gex", "K"], ascending=[False, False, False])
-                .iloc[0]["K"]
+                puts.sort_values(["count", "abs_gex", "K"], ascending=[False, False, False]).iloc[
+                    0
+                ]["K"]
             )
         )
         return call_wall, put_wall
@@ -307,12 +301,10 @@ def find_aggregate_wall_strikes(
     call_source = otm_calls if not otm_calls.empty else calls
     put_source = otm_puts if not otm_puts.empty else puts
 
-    call_wall = None if call_source.empty else float(
-        call_source.loc[call_source["gex"].idxmax(), "K"]
+    call_wall = (
+        None if call_source.empty else float(call_source.loc[call_source["gex"].idxmax(), "K"])
     )
-    put_wall = None if put_source.empty else float(
-        put_source.loc[put_source["gex"].idxmin(), "K"]
-    )
+    put_wall = None if put_source.empty else float(put_source.loc[put_source["gex"].idxmin(), "K"])
     return call_wall, put_wall
 
 
@@ -375,10 +367,7 @@ def _distance_weighted_zone_candidates(
         if side_agg.empty:
             return pd.DataFrame(columns=["K", "score"])
         persistence = (
-            side_rows.groupby("K")["expiration_date"]
-            .nunique()
-            .rename("expiry_count")
-            .reset_index()
+            side_rows.groupby("K")["expiration_date"].nunique().rename("expiry_count").reset_index()
         )
         candidates = side_agg.merge(persistence, on="K", how="left").fillna({"expiry_count": 0})
         mag = candidates["gex"].abs()
@@ -386,8 +375,7 @@ def _distance_weighted_zone_candidates(
         candidates["mag_score"] = mag / max_mag
         candidates["persistence_score"] = candidates["expiry_count"] / total_expiries
         candidates["score"] = (
-            0.70 * candidates["mag_score"]
-            + 0.30 * candidates["persistence_score"]
+            0.70 * candidates["mag_score"] + 0.30 * candidates["persistence_score"]
         )
         return candidates[["K", "score"]]
 
@@ -396,7 +384,6 @@ def _distance_weighted_zone_candidates(
     call_candidates = _build_candidates(call_rows, calls[calls["K"] >= spot])
     put_candidates = _build_candidates(put_rows, puts[puts["K"] <= spot])
     return call_candidates, put_candidates
-
 
 
 def _cluster_candidates_into_zones(
@@ -515,7 +502,6 @@ def find_decision_zones(
         max_zone_width=max_zone_width,
     )
     return resistance_zones, support_zones
-
 
 
 def find_zero_gamma_level(

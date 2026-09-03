@@ -8,6 +8,7 @@ from pathlib import Path
 
 import pandas as pd
 import pytest
+
 from options_monitor.data.options import (
     _parse_filename,
     find_all_snapshots_for_expiry,

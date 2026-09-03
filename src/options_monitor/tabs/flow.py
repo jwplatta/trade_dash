@@ -8,6 +8,7 @@ from zoneinfo import ZoneInfo
 
 import pandas as pd
 import streamlit as st
+
 from options_monitor.calc.flow import compute_intraday_flow
 from options_monitor.calc.flow_profile import compute_flow_profile
 from options_monitor.calc.flow_tape import compute_flow_tape
@@ -79,7 +80,11 @@ def _load_tape(
         mode,
         contract_filter,
         ema_span,
-        len(snapshots) if preloaded is None else len(preloaded),
+        str(snapshots[-1][1])
+        if (preloaded is None and snapshots)
+        else len(preloaded)
+        if preloaded is not None
+        else 0,
     )
     if st.session_state.get("_fl_tape_key") != tape_key:
         with st.spinner("Computing flow tape..."):

@@ -36,7 +36,7 @@ def build_vol_skew_chart(
     put_max = _itm_put_strikes[-1] if _itm_put_strikes else spot
 
     call_df = df[(df["contract_type"].str.upper() == "CALL") & (df["K"] >= call_min)]
-    put_df  = df[(df["contract_type"].str.upper() == "PUT")  & (df["K"] <= put_max)]
+    put_df = df[(df["contract_type"].str.upper() == "PUT") & (df["K"] <= put_max)]
 
     calls_value = call_df.groupby("K")["value"].mean().sort_index()
     puts_value = put_df.groupby("K")["value"].mean().sort_index()
@@ -57,34 +57,48 @@ def build_vol_skew_chart(
     fig = go.Figure()
 
     # OI bars on right axis
-    fig.add_trace(go.Bar(
-        x=calls_oi.index, y=calls_oi.values,
-        name="Call OI",
-        marker_color="green", opacity=0.3,
-        yaxis="y2",
-    ))
-    fig.add_trace(go.Bar(
-        x=puts_oi.index, y=puts_oi.values,
-        name="Put OI",
-        marker_color="red", opacity=0.3,
-        yaxis="y2",
-    ))
+    fig.add_trace(
+        go.Bar(
+            x=calls_oi.index,
+            y=calls_oi.values,
+            name="Call OI",
+            marker_color="green",
+            opacity=0.3,
+            yaxis="y2",
+        )
+    )
+    fig.add_trace(
+        go.Bar(
+            x=puts_oi.index,
+            y=puts_oi.values,
+            name="Put OI",
+            marker_color="red",
+            opacity=0.3,
+            yaxis="y2",
+        )
+    )
 
     # Metric lines on left axis
-    fig.add_trace(go.Scatter(
-        x=calls_value.index, y=calls_value.values,
-        name=f"Call {value_label}",
-        line={"color": "green", "width": 1.5},
-        mode="lines+markers",
-        marker={"size": 4},
-    ))
-    fig.add_trace(go.Scatter(
-        x=puts_value.index, y=puts_value.values,
-        name=f"Put {value_label}",
-        line={"color": "red", "width": 1.5},
-        mode="lines+markers",
-        marker={"size": 4},
-    ))
+    fig.add_trace(
+        go.Scatter(
+            x=calls_value.index,
+            y=calls_value.values,
+            name=f"Call {value_label}",
+            line={"color": "green", "width": 1.5},
+            mode="lines+markers",
+            marker={"size": 4},
+        )
+    )
+    fig.add_trace(
+        go.Scatter(
+            x=puts_value.index,
+            y=puts_value.values,
+            name=f"Put {value_label}",
+            line={"color": "red", "width": 1.5},
+            mode="lines+markers",
+            marker={"size": 4},
+        )
+    )
 
     fig.add_vline(x=spot, line_dash="dash", line_color="white", annotation_text=f"Spot {spot:.0f}")
     fig.update_layout(
