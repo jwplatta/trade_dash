@@ -2,7 +2,7 @@ services:
   options-monitor:
     build: .
     ports:
-      - "8501:8501"
+      - "8502:8501"
     volumes:
       - /Users/jplatta/.tickrake:/Users/jplatta/.tickrake:ro
     environment:
